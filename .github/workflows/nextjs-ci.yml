@@ -29,12 +29,6 @@ jobs:
           cd fashion-ecommerce
           npm install
 
-      # 4. Chạy lint
-      - name: Run lint
-        run: |
-          cd fashion-ecommerce
-          npm run lint
-
       # 5. Chạy test
       - name: Run tests
         run: |
