@@ -29,8 +29,19 @@ jobs:
           cd fashion-ecommerce
           npm install
 
-      # 6. Build Next.js
+      # 🔹 Generate Prisma Client
+      - name: Generate Prisma Client
+        run: |
+          cd fashion-ecommerce
+          npm run db:generate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      # 🔹 Build Next.js 
       - name: Build Next.js
         run: |
           cd fashion-ecommerce
           npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
