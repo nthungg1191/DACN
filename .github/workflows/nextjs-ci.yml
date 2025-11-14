@@ -21,6 +21,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: 'fashion-ecommerce/package-lock.json'
 
       # 3. Cài dependency
       - name: Install dependencies
