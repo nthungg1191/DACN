@@ -34,13 +34,16 @@ jobs:
         run: |
           cd fashion-ecommerce
           npm run lint
-        continue-on-error: false
 
       # 5. Chạy test
       - name: Run tests
-        run: npm test
+        run: |
+          cd fashion-ecommerce
+          npm test
         continue-on-error: false
 
       # 6. Build Next.js
       - name: Build Next.js
-        run: npm run build
+        run: |
+          cd fashion-ecommerce
+          npm run build
