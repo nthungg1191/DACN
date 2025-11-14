@@ -1,0 +1,49 @@
+name: CI - Next.js
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Lấy source
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Cài Node + cache npm (lock file nằm trong thư mục con)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'fashion-ecommerce/package-lock.json'
+
+      # 3. Cài dependency
+      - name: Install dependencies
+        run: |
+          cd fashion-ecommerce
+          npm install
+
+      # 4. Chạy lint
+      - name: Run lint
+        run: |
+          cd fashion-ecommerce
+          npm run lint
+
+      # 5. Chạy test
+      - name: Run tests
+        run: |
+          cd fashion-ecommerce
+          npm test
+        continue-on-error: false
+
+      # 6. Build Next.js
+      - name: Build Next.js
+        run: |
+          cd fashion-ecommerce
+          npm run build
