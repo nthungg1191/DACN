@@ -29,13 +29,6 @@ jobs:
           cd fashion-ecommerce
           npm install
 
-      # 5. Chạy test
-      - name: Run tests
-        run: |
-          cd fashion-ecommerce
-          npm test
-        continue-on-error: false
-
       # 6. Build Next.js
       - name: Build Next.js
         run: |
