@@ -31,7 +31,9 @@ jobs:
 
       # 4. Chạy lint
       - name: Run lint
-        run: npm run lint
+        run: |
+          cd fashion-ecommerce
+          npm run lint
         continue-on-error: false
 
       # 5. Chạy test
