@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { useToast } from '@/components/ui/useToast';
+import { authenticatedFetch } from '@/lib/utils';
 
 interface Address {
   id?: string;
@@ -25,7 +26,7 @@ interface AddressFormProps {
 }
 
 export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) {
-  const { toast } = useToast();
+  const { success: toastSuccess, error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<Omit<Address, 'id'>>({
     fullName: '',
@@ -69,7 +70,7 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
       const url = address?.id ? `/api/addresses/${address.id}` : '/api/addresses';
       const method = address?.id ? 'PUT' : 'POST';
 
-      const response = await fetch(url, {
+      const response = await authenticatedFetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
@@ -82,21 +83,19 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
         throw new Error(error.error || 'Có lỗi xảy ra');
       }
 
-      toast({
-        title: 'Thành công',
-        description: address?.id ? 'Địa chỉ đã được cập nhật' : 'Địa chỉ đã được thêm',
-        type: 'success',
-      });
+      toastSuccess(
+        'Thành công',
+        address?.id ? 'Địa chỉ đã được cập nhật' : 'Địa chỉ đã được thêm'
+      );
 
       if (onSuccess) {
         onSuccess();
       }
     } catch (error: any) {
-      toast({
-        title: 'Lỗi',
-        description: error.message || 'Có lỗi xảy ra khi lưu địa chỉ',
-        type: 'error',
-      });
+      toastError(
+        'Lỗi',
+        error.message || 'Có lỗi xảy ra khi lưu địa chỉ'
+      );
     } finally {
       setLoading(false);
     }

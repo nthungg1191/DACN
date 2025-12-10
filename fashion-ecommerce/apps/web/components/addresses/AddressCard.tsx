@@ -33,7 +33,7 @@ export function AddressCard({
   showActions = true,
   showSelect = false,
 }: AddressCardProps) {
-  const { toast } = useToast();
+  const { success: toastSuccess, error: toastError } = useToast();
   const { mutate } = useAddresses();
 
   const handleDelete = async () => {
@@ -50,19 +50,11 @@ export function AddressCard({
         throw new Error('Xóa địa chỉ thất bại');
       }
 
-      toast({
-        title: 'Thành công',
-        description: 'Địa chỉ đã được xóa',
-        type: 'success',
-      });
+      toastSuccess('Thành công', 'Địa chỉ đã được xóa');
 
       mutate();
     } catch (error: any) {
-      toast({
-        title: 'Lỗi',
-        description: error.message || 'Có lỗi xảy ra khi xóa địa chỉ',
-        type: 'error',
-      });
+      toastError('Lỗi', error.message || 'Có lỗi xảy ra khi xóa địa chỉ');
     }
   };
 
