@@ -99,13 +99,13 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex gap-4 justify-center">
               <Button
                 onClick={this.handleReset}
-                variant="primary"
+                variant="default"
               >
                 Thử lại
               </Button>
               <Button
                 onClick={() => (window.location.href = '/')}
-                variant="secondary"
+                variant="outline"
               >
                 Về trang chủ
               </Button>
