@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@repo/ui';
+import { buttonVariants } from '@repo/ui';
 import { cn } from '@/lib/utils';
 
 interface Slide {
@@ -100,15 +100,15 @@ export function HeroSlider({
                       </h2>
                     )}
                     {slide.buttonText && slide.buttonLink && (
-                      <Button
-                        size="lg"
-                        className="bg-white text-primary hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                        asChild
+                      <a
+                        href={slide.buttonLink}
+                        className={cn(
+                          buttonVariants({ size: 'lg' }),
+                          'bg-white text-primary hover:bg-white/90 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105'
+                        )}
                       >
-                        <a href={slide.buttonLink}>
-                          {slide.buttonText}
-                        </a>
-                      </Button>
+                        {slide.buttonText}
+                      </a>
                     )}
                   </div>
                 </div>
