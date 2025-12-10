@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useOrder } from '@/hooks/useSWR';
@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { CheckCircle, Clock, Package, Truck, XCircle } from 'lucide-react';
 import { OrderCountdown } from '@/components/orders/OrderCountdown';
 
-export default function OrderDetailPage() {
+function OrderDetailContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -611,6 +611,23 @@ export default function OrderDetailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OrderDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-center items-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading order details...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <OrderDetailContent />
+    </Suspense>
   );
 }
 

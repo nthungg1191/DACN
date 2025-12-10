@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@repo/database';
 import { ProductsFilters } from '@/components/admin/products/ProductsFilters';
+import { Suspense } from 'react';
 
 export const dynamic = 'force-dynamic';
 
@@ -118,7 +119,9 @@ export default async function AdminProductsPage({
       </div>
 
       {/* Filters */}
-      <ProductsFilters categories={categories} />
+      <Suspense fallback={<div className="bg-white rounded-lg shadow p-4">Loading filters...</div>}>
+        <ProductsFilters categories={categories} />
+      </Suspense>
 
       {/* Products Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
