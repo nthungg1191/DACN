@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { prisma } from '@repo/database';
 import { ProductsFilters } from '@/components/admin/products/ProductsFilters';
 
+export const dynamic = 'force-dynamic';
+
 async function getProducts(page: number = 1, limit: number = 20, search?: string, categoryId?: string, published?: string) {
   try {
     const skip = (page - 1) * limit;

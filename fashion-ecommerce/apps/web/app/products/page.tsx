@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/hooks/useApp';
 import { ProductGrid } from '@/components/products/ProductGrid';
@@ -22,7 +22,7 @@ const sortOptions = [
   { value: 'rating', label: 'Highest Rated' },
 ];
 
-export default function ProductsPage() {
+function ProductsContent() {
   const { 
     products, 
     loading, 
@@ -333,5 +333,20 @@ export default function ProductsPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function ProductsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading products...</p>
+        </div>
+      </div>
+    }>
+      <ProductsContent />
+    </Suspense>
   );
 }

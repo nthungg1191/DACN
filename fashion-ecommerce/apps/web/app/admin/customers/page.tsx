@@ -3,6 +3,8 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@repo/database';
 
+export const dynamic = 'force-dynamic';
+
 async function getCustomers(page: number = 1, limit: number = 20, search?: string) {
   try {
     const skip = (page - 1) * limit;

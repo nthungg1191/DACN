@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { prisma } from '@repo/database';
 import { OrdersFilters } from '@/components/admin/orders/OrdersFilters';
 
+export const dynamic = 'force-dynamic';
+
 async function getOrders(
   page: number = 1,
   limit: number = 20,

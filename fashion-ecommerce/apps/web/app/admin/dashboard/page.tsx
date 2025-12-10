@@ -2,6 +2,8 @@ import { getCurrentUser } from '@/lib/auth-server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@repo/database';
 
+export const dynamic = 'force-dynamic';
+
 async function getDashboardStats() {
   try {
     const [
