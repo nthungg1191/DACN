@@ -4,33 +4,35 @@ import React from 'react';
 import Link from 'next/link';
 import { useApp } from '@/hooks/useApp';
 import { Button } from '@/components/ui/Button';
-import { ProductCard } from '@/components/products/ProductCard';
-import { ProductGrid } from '@/components/products/ProductGrid';
 import { useToast } from '@/components/ui/useToast';
 import Image from 'next/image';
 
+const DEFAULT_PLACEHOLDER =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="800" height="1000" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="32" font-family="Arial, sans-serif">No Image</text></svg>';
+
+const safeImage = (img?: string) => {
+  if (!img || img.trim() === '') return DEFAULT_PLACEHOLDER;
+  // Handle common mock image paths
+  if (img.includes('product-placeholder') || img.includes('mock')) {
+    return DEFAULT_PLACEHOLDER;
+  }
+  return img;
+};
+
 export default function WishlistPage() {
   const { wishlist, removeFromWishlist, clearWishlist } = useApp();
-  const toast = (useToast() as any).toast;
+  const toast = useToast();
 
   const handleRemoveItem = async (id: string, name: string) => {
     await removeFromWishlist(id);
-    toast({
-      title: 'Removed from Wishlist',
-      description: `${name} has been removed from your wishlist`,
-      type: 'success',
-    });
+    toast.success(`${name} đã được xóa khỏi danh sách yêu thích`);
   };
 
   const handleClearWishlist = async () => {
-    const confirmed = window.confirm('Are you sure you want to clear your wishlist?');
+    const confirmed = window.confirm('Bạn có chắc chắn muốn xóa danh sách yêu thích của bạn?');
     if (confirmed) {
       await clearWishlist();
-      toast({
-        title: 'Wishlist Cleared',
-        description: 'All items have been removed from your wishlist',
-        type: 'success',
-      });
+      toast.success('Tất cả các sản phẩm đã được xóa khỏi danh sách yêu thích');
     }
   };
 
@@ -40,7 +42,7 @@ export default function WishlistPage() {
         <div className="flex justify-center items-center min-h-[400px]">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading wishlist...</p>
+            <p className="text-gray-600">Đang tải danh sách yêu thích...</p>
           </div>
         </div>
       </div>
@@ -66,12 +68,12 @@ export default function WishlistPage() {
               />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Your wishlist is empty</h1>
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">Danh sách yêu thích của bạn trống</h1>
           <p className="text-gray-600 mb-8">
-            Save your favorite products here to view them later.
+            Lưu các sản phẩm yêu thích của bạn ở đây để xem sau.
           </p>
           <Link href="/products">
-            <Button size="lg">Browse Products</Button>
+            <Button size="lg">Xem sản phẩm</Button>
           </Link>
         </div>
       </div>
@@ -84,16 +86,16 @@ export default function WishlistPage() {
       <div className="mb-8">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">My Wishlist</h1>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Danh sách yêu thích của bạn</h1>
             <p className="text-gray-600">
-              {wishlist.totalItems} {wishlist.totalItems === 1 ? 'item' : 'items'} saved
+              {wishlist.items.length} {wishlist.items.length === 1 ? 'sản phẩm' : 'sản phẩm'} đã lưu
             </p>
           </div>
           <button
             onClick={handleClearWishlist}
             className="text-sm text-red-600 hover:text-red-700 font-medium transition"
           >
-            Clear Wishlist
+            Xóa danh sách yêu thích
           </button>
         </div>
       </div>
@@ -119,16 +121,11 @@ export default function WishlistPage() {
                 {/* Image */}
                 <div className="relative w-full aspect-square bg-gray-100 overflow-hidden">
                   <Image
-                    src={item.image || '/images/products/product-placeholder.jpg'}
+                    src={safeImage(item.image)}
                     alt={item.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  {item.featured && (
-                    <span className="absolute top-2 left-2 bg-red-500 text-white text-xs font-semibold px-2 py-1 rounded">
-                      Featured
-                    </span>
-                  )}
                 </div>
 
                 {/* Content */}
@@ -137,35 +134,9 @@ export default function WishlistPage() {
                     <h3 className="font-semibold text-gray-900 line-clamp-2 mb-1 group-hover:text-blue-600 transition">
                       {item.name}
                     </h3>
-                    {item.category && (
-                      <p className="text-sm text-gray-500">{item.category}</p>
-                    )}
                   </div>
 
                   <div className="mt-auto">
-                    {/* Rating */}
-                    {item.rating > 0 && (
-                      <div className="flex items-center gap-1 mb-2">
-                        <div className="flex">
-                          {[...Array(5)].map((_, i) => (
-                            <svg
-                              key={i}
-                              className={`w-4 h-4 ${
-                                i < Math.round(item.rating) ? 'text-yellow-400' : 'text-gray-300'
-                              }`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                          ))}
-                        </div>
-                        <span className="text-xs text-gray-600">
-                          ({item.reviewCount || 0})
-                        </span>
-                      </div>
-                    )}
-
                     {/* Price */}
                     <div className="flex items-center gap-2">
                       <span className="text-lg font-bold text-blue-600">
@@ -174,22 +145,15 @@ export default function WishlistPage() {
                           currency: 'VND',
                         }).format(item.price)}
                       </span>
-                      {item.comparePrice && item.comparePrice > item.price && (
+                      {item.originalPrice && item.originalPrice > item.price && (
                         <span className="text-sm text-gray-400 line-through">
                           {new Intl.NumberFormat('vi-VN', {
                             style: 'currency',
                             currency: 'VND',
-                          }).format(item.comparePrice)}
+                          }).format(item.originalPrice)}
                         </span>
                       )}
                     </div>
-
-                    {/* In Stock Badge */}
-                    {item.inStock ? (
-                      <span className="text-xs text-green-600 font-medium mt-1">In Stock</span>
-                    ) : (
-                      <span className="text-xs text-red-600 font-medium mt-1">Out of Stock</span>
-                    )}
                   </div>
                 </div>
               </div>
