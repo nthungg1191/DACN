@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Mail, Lock, LogIn, AlertCircle } from 'lucide-react';
 
-export default function SignInPage() {
+function SignInPageContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -62,17 +62,27 @@ export default function SignInPage() {
         });
 
         if (nextAuthResult?.error) {
-          console.warn('NextAuth signIn failed (but custom auth succeeded):', nextAuthResult.error);
+          console.warn(
+            'NextAuth signIn failed (but custom auth succeeded):',
+            nextAuthResult.error
+          );
           // Continue anyway since custom auth succeeded
         }
       } catch (nextAuthError) {
-        console.warn('NextAuth signIn error (but custom auth succeeded):', nextAuthError);
+        console.warn(
+          'NextAuth signIn error (but custom auth succeeded):',
+          nextAuthError
+        );
         // Continue anyway since custom auth succeeded
       }
 
       // Set a flag in sessionStorage to indicate we're coming from signin
       // This helps prevent redirect loops in protected pages
-      if (callbackUrl && callbackUrl !== '/auth/signin' && !callbackUrl.startsWith('/auth/signin')) {
+      if (
+        callbackUrl &&
+        callbackUrl !== '/auth/signin' &&
+        !callbackUrl.startsWith('/auth/signin')
+      ) {
         sessionStorage.setItem('fromSignin', 'true');
         // Use window.location.href to force full page reload and ensure session is updated
         window.location.href = callbackUrl;
@@ -127,7 +137,10 @@ export default function SignInPage() {
 
             {/* Email Field */}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold text-gray-700">
+              <Label
+                htmlFor="email"
+                className="text-sm font-semibold text-gray-700"
+              >
                 Email
               </Label>
               <div className="relative group">
@@ -149,7 +162,10 @@ export default function SignInPage() {
 
             {/* Password Field */}
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-semibold text-gray-700">
+              <Label
+                htmlFor="password"
+                className="text-sm font-semibold text-gray-700"
+              >
                 Mật khẩu
               </Label>
               <div className="relative group">
@@ -194,8 +210,8 @@ export default function SignInPage() {
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
               Chưa có tài khoản?{' '}
-              <Link 
-                href="/auth/register" 
+              <Link
+                href="/auth/register"
                 className="font-semibold text-gray-900 hover:text-gray-700 transition-colors underline underline-offset-4"
               >
                 Đăng ký ngay
@@ -206,8 +222,8 @@ export default function SignInPage() {
 
         {/* Additional Info */}
         <div className="mt-6 text-center">
-          <Link 
-            href="/" 
+          <Link
+            href="/"
             className="text-sm text-gray-600 hover:text-gray-900 font-medium transition-colors inline-flex items-center gap-1"
           >
             ← Quay lại trang chủ
@@ -215,5 +231,13 @@ export default function SignInPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInPageContent />
+    </Suspense>
   );
 }
