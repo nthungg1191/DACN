@@ -11,7 +11,7 @@ import Image from 'next/image';
 
 export default function WishlistPage() {
   const { wishlist, removeFromWishlist, clearWishlist } = useApp();
-  const { toast } = useToast();
+  const toast = (useToast() as any).toast;
 
   const handleRemoveItem = async (id: string, name: string) => {
     await removeFromWishlist(id);
