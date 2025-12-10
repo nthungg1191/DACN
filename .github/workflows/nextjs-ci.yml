@@ -29,6 +29,12 @@ jobs:
           cd fashion-ecommerce
           npm install
 
+      # 🔍 NEW — Check ESLint
+      - name: Run ESLint
+        run: |
+          cd fashion-ecommerce
+          npm run lint
+
       # 🔹 Generate Prisma Client
       - name: Generate Prisma Client
         run: |
@@ -37,11 +43,10 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-      # 🔹 Build Next.js 
+      # 🔹 Build Next.js
       - name: Build Next.js
         run: |
           cd fashion-ecommerce
           npm run build
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
