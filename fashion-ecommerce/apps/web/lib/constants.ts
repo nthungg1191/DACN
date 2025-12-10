@@ -22,8 +22,8 @@ export const FOOTER_LINKS = {
     { href: '/privacy', label: 'Chính sách bảo mật' },
   ],
   social: [
-    { href: 'https://facebook.com', label: 'Facebook' },
-    { href: 'https://instagram.com', label: 'Instagram' },
+    { href: 'https://www.facebook.com/ngoc.anh.58368', label: 'Facebook' },
+    { href: 'https://www.instagram.com/anhcuteee48/', label: 'Instagram' },
     { href: 'https://twitter.com', label: 'Twitter' },
   ],
 };

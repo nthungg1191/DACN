@@ -20,3 +20,50 @@ export function formatDate(date: Date | string): string {
   }).format(new Date(date));
 }
 
+/**
+ * Handle 401 Unauthorized response - redirects to login
+ * Use this in components that make direct fetch calls
+ */
+export function handleUnauthorizedResponse() {
+  if (typeof window === 'undefined') return;
+  
+  const currentPath = window.location.pathname;
+  // Don't redirect if already on signin/login pages or admin routes
+  const isSigninPage = currentPath === '/auth/signin';
+  const isAdminLoginPage = currentPath === '/admin/login';
+  const isAdminRoute = currentPath.startsWith('/admin');
+  
+  if (isSigninPage || isAdminLoginPage || isAdminRoute) {
+    return;
+  }
+  
+  const callbackUrl = currentPath + window.location.search;
+  
+  // Prevent redirect loop: don't set callbackUrl if it's already /auth/signin
+  if (callbackUrl === '/auth/signin' || callbackUrl.startsWith('/auth/signin')) {
+    window.location.href = '/auth/signin';
+  } else {
+    window.location.href = `/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  }
+}
+
+/**
+ * Fetch wrapper that handles 401 errors
+ */
+export async function authenticatedFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  const response = await fetch(url, {
+    ...options,
+    credentials: 'include',
+  });
+
+  if (response.status === 401) {
+    handleUnauthorizedResponse();
+    throw new Error('Unauthorized - Please sign in again');
+  }
+
+  return response;
+}
+

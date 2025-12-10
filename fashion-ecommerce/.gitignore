@@ -45,9 +45,8 @@ Thumbs.db
 
 # Prisma
 packages/database/migrations/
-.seed.ts 
 
 #readme files
-
+README.md
 
 

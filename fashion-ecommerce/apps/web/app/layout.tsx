@@ -3,6 +3,9 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { Header } from '@/components/layout/header';
 import { Footer } from '@/components/layout/footer';
+import { AppProvider } from '@/contexts/AppProvider';
+import { ChatWidget } from '@/components/chat/ChatWidget';
+import { ConditionalLayout } from '@/components/layout/ConditionalLayout';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -19,11 +22,11 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <body className={inter.className}>
-        <div className="flex min-h-screen flex-col">
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </div>
+        <AppProvider>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
+        </AppProvider>
       </body>
     </html>
   );

@@ -103,6 +103,8 @@ model Product {
   images      String[]
   featured    Boolean  @default(false)
   published   Boolean  @default(false)
+  brand       String?
+  tags        String[]
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
   
@@ -117,6 +119,7 @@ model Product {
 
   @@index([categoryId])
   @@index([slug])
+  @@index([brand])
   @@map("products")
 }
 
@@ -128,12 +131,15 @@ model ProductVariant {
   sku         String   @unique
   price       Decimal  @db.Decimal(10, 2)
   quantity    Int      @default(0)
+  size        String?
+  color       String?
   attributes  Json // e.g., { "size": "M", "color": "Red" }
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([productId])
+  @@unique([productId, size, color])
   @@map("product_variants")
 }
 
@@ -171,12 +177,16 @@ model CartItem {
   cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      String?
+  color     String?
+  price     Decimal? @db.Decimal(10, 2)
   quantity  Int      @default(1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([cartId])
   @@index([productId])
+  @@unique([cartId, productId, size, color])
   @@map("cart_items")
 }
 
@@ -208,7 +218,12 @@ model Order {
   shippingAddress Json
   billingAddress  Json
   paymentMethod   String
+  paymentGateway  String?      // VNPay, Stripe, MoMo, COD
   paymentStatus   PaymentStatus @default(PENDING)
+  paymentTransactionId String?  // Transaction ID từ gateway
+  paymentIntentId String?      // Payment Intent ID (Stripe)
+  paymentUrl      String?      // Payment URL (VNPay)
+  paymentMetadata Json?        // Metadata từ gateway
   notes           String?     @db.Text
   
   items           OrderItem[]

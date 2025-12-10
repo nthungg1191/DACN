@@ -22,13 +22,19 @@
     "docker:logs": "docker-compose logs -f"
   },
   "devDependencies": {
-    "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.2.5",
-    "turbo": "^1.12.4",
+    "turbo": "^2.6.2",
     "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
-  }
+  },
+  "dependencies": {
+    "next": "^16.0.7",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "sonner": "^2.0.7"
+  },
+  "packageManager": "npm@11.6.1"
 }
