@@ -16,10 +16,11 @@ const querySchema = z.object({
   featured: z.string().optional(),
 });
 
-export async function GET(
+export async function GET (
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: any
 ) {
+  const categoryId = params.id;
   try {
     const { id } = paramsSchema.parse(params);
     const { searchParams } = new URL(request.url);
