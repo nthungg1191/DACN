@@ -6,7 +6,7 @@
     "dev": "node scripts/update-ngrok-url.js --soft && next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "update-ngrok": "node scripts/update-ngrok-url.js"
   },
   "dependencies": {
