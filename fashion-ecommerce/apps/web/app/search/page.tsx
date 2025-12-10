@@ -12,7 +12,7 @@ import Image from 'next/image';
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
-  const { searchProducts, searchResults, isSearching, totalResults, currentPage, setCurrentPage, totalPages } = useApp();
+  const { searchProducts, searchResults, isSearching, currentPage, setCurrentPage, totalPages } = useApp();
   
   const [query, setQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,7 +30,7 @@ export default function SearchPage() {
       searchProducts(q, {
         page: 1, // Always start from page 1 when URL params change
         limit: 12,
-        category: category || undefined,
+        filters: { category: category || undefined },
       });
       setCurrentPage(1); // Reset to page 1 when search params change
     }
@@ -43,7 +43,7 @@ export default function SearchPage() {
       searchProducts(searchTerm, {
         page: 1,
         limit: 12,
-        category: selectedCategory || undefined,
+        filters: { category: selectedCategory || undefined },
       });
       setCurrentPage(1);
       
@@ -63,7 +63,7 @@ export default function SearchPage() {
       searchProducts(searchQuery, {
         page: page,
         limit: 12,
-        category: selectedCategory || undefined,
+        filters: { category: selectedCategory || undefined },
       });
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -75,7 +75,7 @@ export default function SearchPage() {
       searchProducts(searchQuery, {
         page: 1,
         limit: 12,
-        category: categoryId || undefined,
+        filters: { category: categoryId || undefined },
       });
       setCurrentPage(1);
       
@@ -137,7 +137,7 @@ export default function SearchPage() {
           {/* Results Info */}
           <div className="mb-6">
             <p className="text-gray-600">
-              Found {totalResults} {totalResults === 1 ? 'result' : 'results'}
+              Found {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
               {query && ` for "${query}"`}
             </p>
           </div>
