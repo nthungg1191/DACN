@@ -10,7 +10,7 @@ const paramsSchema = z.object({
 // PUT /api/cart/items/[id] - Update cart item quantity
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -19,7 +19,7 @@ export async function PUT(
       return createUnauthorizedResponse();
     }
 
-    const { id } = paramsSchema.parse(params);
+    const { id } = paramsSchema.parse(await params);
     const body = await request.json();
     const updateSchema = z.object({
       quantity: z.number().min(1, 'Quantity must be at least 1').max(99, 'Quantity cannot exceed 99'),
@@ -111,7 +111,7 @@ export async function PUT(
 // DELETE /api/cart/items/[id] - Remove item from cart
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -120,7 +120,7 @@ export async function DELETE(
       return createUnauthorizedResponse();
     }
 
-    const { id } = paramsSchema.parse(params);
+    const { id } = paramsSchema.parse(await params);
 
     // Check if cart item exists and belongs to user
     const cartItem = await prisma.cartItem.findFirst({
