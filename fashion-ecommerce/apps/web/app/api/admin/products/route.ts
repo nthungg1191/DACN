@@ -176,7 +176,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: `Variant SKUs already exist: ${existingVariants.map((v) => v.sku).join(', ')}`,
+            error: `Variant SKUs already exist: ${existingVariants.map((v: any) => v.sku).join(', ')}`,
           },
           { status: 400 }
         );
