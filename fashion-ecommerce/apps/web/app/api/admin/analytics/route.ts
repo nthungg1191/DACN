@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
         totalOrders,
         totalCustomers,
         averageOrderValue: averageOrderValue._avg.total || 0,
-        ordersByStatus: ordersByStatus.map((item) => ({
+        ordersByStatus: ordersByStatus.map((item: any) => ({
           status: item.status,
           count: item._count.id,
         })),
