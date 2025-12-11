@@ -123,7 +123,7 @@ export async function GET (
     // Calculate average rating for each product
     const productsWithRating = products.map((product: any) => {
       const avgRating = product.reviews.length > 0
-        ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+        ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / product.reviews.length
         : 0;
 
       return {
