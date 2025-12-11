@@ -51,7 +51,7 @@ export async function GET (
     }
 
     // Get all category IDs (current category + its children)
-    const categoryIds = [id, ...category.children.map(child => child.id)];
+    const categoryIds = [id, ...category.children.map((child: any) => child.id)];
 
     // Build where clause
     const where: any = {
