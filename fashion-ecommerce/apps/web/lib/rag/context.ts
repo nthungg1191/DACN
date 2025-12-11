@@ -67,7 +67,7 @@ async function getProductsForRAG(): Promise<ProductSummary[]> {
     },
   });
 
-  const formatted: ProductSummary[] = products.map((p) => ({
+  const formatted: ProductSummary[] = products.map((p: any) => ({
     id: p.id,
     name: p.name,
     slug: p.slug,
@@ -103,7 +103,7 @@ async function getCategoriesForRAG(): Promise<CategorySummary[]> {
     },
   });
 
-  const formatted: CategorySummary[] = categories.map((c) => ({
+  const formatted: CategorySummary[] = categories.map((c: any) => ({
     id: c.id,
     name: c.name,
     slug: c.slug,
@@ -126,12 +126,12 @@ export async function buildRAGContext(): Promise<RAGContext> {
   const policies = formatPoliciesForRAG();
 
   // Tạo summary
-  const categoryList = categories.map((c) => c.name).join(', ');
+  const categoryList = categories.map((c: any) => c.name).join(', ');
   const productCount = products.length;
-  const inStockCount = products.filter((p) => p.inStock).length;
+  const inStockCount = products.filter((p: any) => p.inStock).length;
   const priceRange =
     products.length > 0
-      ? `Từ ${Math.min(...products.map((p) => p.price)).toLocaleString('vi-VN')}đ đến ${Math.max(...products.map((p) => p.price)).toLocaleString('vi-VN')}đ`
+      ? `Từ ${Math.min(...products.map((p: any) => p.price)).toLocaleString('vi-VN')}đ đến ${Math.max(...products.map((p: any) => p.price)).toLocaleString('vi-VN')}đ`
       : 'Chưa có sản phẩm';
 
   const summary = `Cửa hàng có ${productCount} sản phẩm (${inStockCount} còn hàng). Danh mục: ${categoryList}. Giá: ${priceRange}.`;
