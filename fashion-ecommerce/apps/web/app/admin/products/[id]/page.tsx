@@ -261,7 +261,7 @@ export default async function AdminProductDetailPage({
                 <div>
                   <label className="text-sm font-medium text-gray-500">Thẻ</label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {product.tags.map((tag, index) => (
+                    {product.tags.map((tag: string, index: number) => (
                       <span
                         key={index}
                         className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm"
