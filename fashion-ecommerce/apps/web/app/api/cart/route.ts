@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@repo/database';
 import { Prisma } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 import { getCurrentUser, createUnauthorizedResponse } from '@/lib/auth-server';
 import { z } from 'zod';
 
@@ -254,7 +255,7 @@ export async function POST(request: NextRequest) {
           quantity: newQuantity,
           size: size || null,
           color: color || null,
-          price: price ? new Prisma.Decimal(price) : existingItem.price,
+          price: price ? new Decimal(price) : existingItem.price,
         },
         include: {
           product: {
@@ -290,7 +291,7 @@ export async function POST(request: NextRequest) {
           quantity: quantity,
           size: size || null,
           color: color || null,
-          price: price ? new Prisma.Decimal(price) : null,
+          price: price ? new Decimal(price) : null,
         },
         include: {
           product: {
