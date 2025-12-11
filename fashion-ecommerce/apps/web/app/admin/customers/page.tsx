@@ -44,7 +44,7 @@ async function getCustomers(page: number = 1, limit: number = 20, search?: strin
 
     // Calculate total spent for each customer
     const customersWithStats = await Promise.all(
-      customers.map(async (customer) => {
+      customers.map(async (customer: any) => {
         const totalSpent = await prisma.order.aggregate({
           where: {
             userId: customer.id,

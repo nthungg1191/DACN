@@ -55,7 +55,7 @@ async function getProducts(page: number = 1, limit: number = 20, search?: string
       }),
     ]);
 
-    const products = rawProducts.map((p) => ({
+    const products = rawProducts.map((p: any) => ({
       ...p,
       price: p.price.toNumber ? p.price.toNumber() : Number(p.price),
       comparePrice: p.comparePrice ? (p.comparePrice.toNumber ? p.comparePrice.toNumber() : Number(p.comparePrice)) : null,

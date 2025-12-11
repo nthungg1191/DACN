@@ -103,7 +103,7 @@ async function getProductDetail(productId: string) {
       price,
       comparePrice,
       costPrice: product.costPrice?.toNumber() || null,
-      variants: product.variants.map((v) => ({
+      variants: product.variants.map((v: any) => ({
         ...v,
         price: v.price.toNumber(),
       })),

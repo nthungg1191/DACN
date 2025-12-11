@@ -42,7 +42,7 @@ async function getOrderDetail(orderId: string) {
       tax: order.tax.toNumber(),
       shipping: order.shipping.toNumber(),
       total: order.total.toNumber(),
-      items: order.items.map((item) => ({
+      items: order.items.map((item: any) => ({
         ...item,
         price: item.price.toNumber(),
         total: item.total.toNumber(),
