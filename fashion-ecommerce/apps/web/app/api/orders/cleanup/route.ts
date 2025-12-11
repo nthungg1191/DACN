@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Hủy orders và restore product quantities
     let restoredProductsCount = 0;
 
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => {
       for (const order of expiredOrders) {
         // Update order status
         await tx.order.update({
