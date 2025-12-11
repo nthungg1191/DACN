@@ -67,9 +67,9 @@ export async function GET(request: NextRequest) {
     ]);
 
     // Calculate average rating for each product
-    const wishlistWithRatings = wishlistItems.map(item => {
+    const wishlistWithRatings = wishlistItems.map((item: any) => {
       const avgRating = item.product.reviews.length > 0
-        ? item.product.reviews.reduce((sum, review) => sum + review.rating, 0) / item.product.reviews.length
+        ? item.product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / item.product.reviews.length
         : 0;
 
       return {
@@ -204,7 +204,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate average rating
     const avgRating = wishlistItem.product.reviews.length > 0
-      ? wishlistItem.product.reviews.reduce((sum, review) => sum + review.rating, 0) / wishlistItem.product.reviews.length
+      ? wishlistItem.product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / wishlistItem.product.reviews.length
       : 0;
 
     const wishlistItemWithRating = {
