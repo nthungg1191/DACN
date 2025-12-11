@@ -70,11 +70,11 @@ async function getProductDetail(productId: string) {
     });
 
     const totalRevenue = orderItems
-      .filter((item) => item.order.paymentStatus === 'PAID')
-      .reduce((sum, item) => sum + item.total.toNumber(), 0);
+      .filter((item: any) => item.order.paymentStatus === 'PAID')
+      .reduce((sum: number, item: any) => sum + item.total.toNumber(), 0);
 
     const totalOrders = orderItems.length;
-    const totalQuantitySold = orderItems.reduce((sum, item) => sum + item.quantity, 0);
+    const totalQuantitySold = orderItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
 
     // Calculate average rating
     const reviews = await prisma.review.findMany({
@@ -83,7 +83,7 @@ async function getProductDetail(productId: string) {
     });
     const averageRating =
       reviews.length > 0
-        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
         : 0;
 
     // Calculate isOnSale and isNew automatically

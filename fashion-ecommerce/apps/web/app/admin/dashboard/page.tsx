@@ -230,7 +230,7 @@ export default async function AdminDashboardPage() {
                     </td>
                   </tr>
                 ) : (
-                  stats.recentOrders.map((order) => (
+                  stats.recentOrders.map((order: any) => (
                     <tr key={order.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {order.orderNumber}
