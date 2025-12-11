@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
 
     // Get product details for top products
     const topProductsWithDetails = await Promise.all(
-      topProducts.map(async (item) => {
+      topProducts.map(async (item: any) => {
         const product = await prisma.product.findUnique({
           where: { id: item.productId },
           select: {
