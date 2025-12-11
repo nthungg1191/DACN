@@ -37,7 +37,7 @@ export async function GET(
 
     const ratingDistribution = [1, 2, 3, 4, 5].reduce<Record<number, number>>(
       (acc, rating) => {
-        acc[rating] = reviews.filter((r) => r.rating === rating).length;
+        acc[rating] = reviews.filter((r: any) => r.rating === rating).length;
         return acc;
       },
       { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
