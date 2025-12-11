@@ -34,7 +34,7 @@ async function getAnalytics() {
       totalOrders,
       totalCustomers,
       averageOrderValue: averageOrderValue._avg.total || 0,
-      ordersByStatus: ordersByStatus.map((item) => ({
+      ordersByStatus: ordersByStatus.map((item: { status: string; _count: { id: number } }) => ({
         status: item.status,
         count: item._count.id,
       })),
