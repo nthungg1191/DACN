@@ -92,11 +92,11 @@ export async function GET(request: NextRequest) {
       _count: { reviews: number };
     };
 
-    const categoriesWithProductRatings = categories.map((category) => {
+    const categoriesWithProductRatings = categories.map((category: any) => {
       const mapProduct = (product: ProductWithMeta) => {
         const avgRating =
           product.reviews.length > 0
-            ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+            ? product.reviews.reduce((sum: number, review: any ) => sum + review.rating, 0) /
               product.reviews.length
             : 0;
 
@@ -109,9 +109,9 @@ export async function GET(request: NextRequest) {
 
       return {
         ...category,
-        children: category.children.map((child) => ({
+        children: category.children.map((child: any) => ({
           ...child,
-          children: child.children.map((subChild) => ({
+          children: child.children.map((subChild: any) => ({
             ...subChild,
             productCount: subChild._count?.products ?? 0,
           })),
