@@ -159,7 +159,7 @@ export async function PATCH(
     // If order is cancelled, restore product quantities
     if (parsedData.status === 'CANCELLED' && existingOrder.status !== 'CANCELLED') {
       await prisma.$transaction(
-        updatedOrder.items.map((item) =>
+        updatedOrder.items.map((item: any) =>
           prisma.product.update({
             where: { id: item.productId },
             data: {
