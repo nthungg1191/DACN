@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
 
     // Calculate totals
     let subtotal = 0;
-    const orderItems = cart.items.map((item) => {
+    const orderItems = cart.items.map((item: any) => {
       const itemPrice = Number(item.product.price);
       const itemTotal = itemPrice * item.quantity;
       subtotal += itemTotal;
