@@ -129,8 +129,8 @@ export async function GET(request: NextRequest) {
 
     const suggestions = [
       ...new Set([
-        ...searchSuggestions.map(p => p.name),
-        ...searchSuggestions.map(p => p.category.name),
+        ...searchSuggestions.map((p: any) => p.name),
+        ...searchSuggestions.map((p: any) => p.category.name),
       ])
     ].slice(0, 5);
 
