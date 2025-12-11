@@ -149,7 +149,7 @@ export default async function AdminAnalyticsPage() {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {analytics.ordersByStatus.map((item) => (
+            {analytics.ordersByStatus.map((item: { status: string; count: number }) => (
               <div key={item.status} className="text-center">
                 <p className="text-2xl font-bold text-gray-900">{item.count}</p>
                 <p className="text-sm text-gray-500 mt-1">{item.status}</p>
