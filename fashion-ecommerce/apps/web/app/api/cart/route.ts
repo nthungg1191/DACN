@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate totals
-    const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-    const subtotal = cart.items.reduce((sum, item) => {
+    const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
+    const subtotal = cart.items.reduce((sum: number, item: any) => {
       const itemPrice = item.price ? Number(item.price) : Number(item.product.price);
       return sum + (itemPrice * item.quantity);
     }, 0);
