@@ -79,7 +79,7 @@ async function getCustomerDetail(customerId: string, page: number = 1, limit: nu
     return {
       ...customer,
       totalSpent: totalSpent._sum.total?.toNumber() || 0,
-      orders: orders.map((order) => ({
+      orders: orders.map((order: any) => ({
         ...order,
         total: order.total.toNumber(),
       })),
