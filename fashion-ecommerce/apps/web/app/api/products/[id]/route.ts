@@ -122,7 +122,7 @@ export async function GET(
     });
 
     // Calculate average rating for related products
-    const relatedProductsWithRating = relatedProducts.map(relatedProduct => {
+    const relatedProductsWithRating = relatedProducts.map((relatedProduct: any) => {
       const avgRating = relatedProduct.reviews.length > 0
         ? relatedProduct.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) / relatedProduct.reviews.length
         : 0;
