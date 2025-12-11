@@ -208,7 +208,7 @@ export default async function AdminProductDetailPage({
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Hình ảnh sản phẩm</h2>
             {product.images && product.images.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {product.images.map((image, index) => (
+                {product.images.map((image: string, index: number) => (
                   <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
                     <img
                       src={image}
