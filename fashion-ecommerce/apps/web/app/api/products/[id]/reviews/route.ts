@@ -31,7 +31,7 @@ export async function GET(
         ? 0
         : Number(
             (
-              reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
+              reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews
             ).toFixed(1)
           );
 
