@@ -269,7 +269,7 @@ export async function POST(request: NextRequest) {
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     // Create order in transaction
-    const order = await prisma.$transaction(async (tx) => {
+    const order = await prisma.$transaction(async (tx: any) => {
       // Prepare address data for JSON fields
       const shippingAddressData = {
         id: shippingAddress.id,
