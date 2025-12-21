@@ -16,6 +16,7 @@ const colorNameToHex: Record<string, string> = {
   'Cam': '#F97316',
   'Be': '#FEF3C7',
   'Kem': '#FFFBEB',
+  'Hồng phớt': 'rgb(250, 218, 221)', 
   
   // English colors
   'Black': '#000000',
@@ -33,6 +34,7 @@ const colorNameToHex: Record<string, string> = {
   'Navy': '#1e3a8a',
   'Beige': '#FEF3C7',
   'Cream': '#FFFBEB',
+  'Pink blush': 'rgb(250, 218, 221)',
 };
 
 /**

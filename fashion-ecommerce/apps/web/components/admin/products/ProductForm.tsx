@@ -774,7 +774,6 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             <Input
               id="price"
               type="number"
-              step="0.01"
               min="0"
               value={formData.price}
               onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}

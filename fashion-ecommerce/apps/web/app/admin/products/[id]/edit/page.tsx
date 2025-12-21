@@ -43,7 +43,7 @@ export default async function AdminEditProductPage({
         price: serializeNumber(product.price),
         comparePrice: serializeNumber(product.comparePrice),
         costPrice: serializeNumber(product.costPrice),
-        variants: product.variants.map((v: any) => ({
+        variants: product.variants.map((v) => ({
           ...v,
           price: serializeNumber(v.price),
         })),

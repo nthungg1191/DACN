@@ -56,12 +56,20 @@ async function getProductDetail(productId: string) {
 
     if (!product) return null;
 
-    // Calculate statistics
+    // Calculate statistics - only count non-cancelled orders
     const orderItems = await prisma.orderItem.findMany({
-      where: { productId },
+      where: { 
+        productId,
+        order: {
+          status: {
+            not: 'CANCELLED', // Exclude cancelled orders
+          },
+        },
+      },
       include: {
         order: {
           select: {
+            status: true,
             paymentStatus: true,
             total: true,
           },
@@ -70,11 +78,12 @@ async function getProductDetail(productId: string) {
     });
 
     const totalRevenue = orderItems
-      .filter((item: any) => item.order.paymentStatus === 'PAID')
-      .reduce((sum: number, item: any) => sum + item.total.toNumber(), 0);
+      .filter((item) => item.order.paymentStatus === 'PAID' && item.order.status !== 'CANCELLED')
+      .reduce((sum, item) => sum + item.total.toNumber(), 0);
 
     const totalOrders = orderItems.length;
-    const totalQuantitySold = orderItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+    // Only count sold quantity from non-cancelled orders
+    const totalQuantitySold = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
     // Calculate average rating
     const reviews = await prisma.review.findMany({
@@ -83,7 +92,7 @@ async function getProductDetail(productId: string) {
     });
     const averageRating =
       reviews.length > 0
-        ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
         : 0;
 
     // Calculate isOnSale and isNew automatically
@@ -103,7 +112,7 @@ async function getProductDetail(productId: string) {
       price,
       comparePrice,
       costPrice: product.costPrice?.toNumber() || null,
-      variants: product.variants.map((v: any) => ({
+      variants: product.variants.map((v) => ({
         ...v,
         price: v.price.toNumber(),
       })),
@@ -208,7 +217,7 @@ export default async function AdminProductDetailPage({
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Hình ảnh sản phẩm</h2>
             {product.images && product.images.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {product.images.map((image: string, index: number) => (
+                {product.images.map((image, index) => (
                   <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
                     <img
                       src={image}
@@ -261,7 +270,7 @@ export default async function AdminProductDetailPage({
                 <div>
                   <label className="text-sm font-medium text-gray-500">Thẻ</label>
                   <div className="flex flex-wrap gap-2 mt-1">
-                    {product.tags.map((tag: string, index: number) => (
+                    {product.tags.map((tag, index) => (
                       <span
                         key={index}
                         className="px-2 py-1 bg-gray-100 text-gray-700 rounded text-sm"

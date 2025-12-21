@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState, Suspense } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useOrder } from '@/hooks/useSWR';
@@ -11,7 +11,7 @@ import Image from 'next/image';
 import { CheckCircle, Clock, Package, Truck, XCircle } from 'lucide-react';
 import { OrderCountdown } from '@/components/orders/OrderCountdown';
 
-function OrderDetailContent() {
+export default function OrderDetailPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -51,11 +51,37 @@ function OrderDetailContent() {
     }
   }, [searchParams, order, orderId, router, toastError]);
 
-  const formatPrice = (price: number) => {
+  const formatPrice = (price: number | string | null | undefined) => {
+    if (price === null || price === undefined || isNaN(Number(price))) {
+      return '0 ₫';
+    }
+    const numPrice = typeof price === 'string' ? parseFloat(price) : Number(price);
+    if (isNaN(numPrice)) {
+      return '0 ₫';
+    }
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
-    }).format(price);
+    }).format(numPrice);
+  };
+
+  const formatDate = (date: string | Date | null | undefined) => {
+    if (!date) return 'N/A';
+    try {
+      const dateObj = date instanceof Date ? date : new Date(date);
+      if (isNaN(dateObj.getTime())) {
+        return 'N/A';
+      }
+      return dateObj.toLocaleDateString('vi-VN', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return 'N/A';
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -64,6 +90,8 @@ function OrderDetailContent() {
       PROCESSING: 'bg-blue-100 text-blue-800',
       SHIPPED: 'bg-purple-100 text-purple-800',
       DELIVERED: 'bg-green-100 text-green-800',
+      RECEIVED: 'bg-emerald-100 text-emerald-800',
+      RETURN_REQUESTED: 'bg-orange-100 text-orange-800',
       CANCELLED: 'bg-red-100 text-red-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
@@ -73,8 +101,10 @@ function OrderDetailContent() {
     const texts: Record<string, string> = {
       PENDING: 'Chờ xử lý',
       PROCESSING: 'Đang xử lý',
-      SHIPPED: 'Đã giao hàng',
-      DELIVERED: 'Đã nhận hàng',
+      SHIPPED: 'Đang giao hàng',
+      DELIVERED: 'Đã giao hàng',
+      RECEIVED: 'Đã nhận hàng',
+      RETURN_REQUESTED: 'Yêu cầu hoàn hàng',
       CANCELLED: 'Đã hủy',
     };
     return texts[status] || status;
@@ -107,6 +137,18 @@ function OrderDetailContent() {
       CREDIT_CARD: 'Thẻ tín dụng',
     };
     return texts[method] || method;
+  };
+
+  const canConfirmReceived = () => {
+    if (!order || order.status !== 'DELIVERED') return false;
+    const deliveredAt = (order as any).deliveredAt ? new Date((order as any).deliveredAt) : new Date(order.updatedAt);
+    const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+    return new Date().getTime() - deliveredAt.getTime() <= sevenDaysMs;
+  };
+
+  const canRequestReturn = () => {
+    if (!order || order.status !== 'DELIVERED') return false;
+    return canConfirmReceived();
   };
 
   const handleCancelOrder = async () => {
@@ -150,6 +192,72 @@ function OrderDetailContent() {
     }
   };
 
+  const handleConfirmReceived = async () => {
+    if (!order || !canConfirmReceived()) return;
+
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'RECEIVED',
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Không thể xác nhận đã nhận hàng');
+      }
+
+      toastSuccess('Cảm ơn bạn', 'Đã ghi nhận trạng thái bạn đã nhận hàng.');
+      mutate();
+    } catch (error) {
+      console.error('Error confirming received:', error);
+      toastError(
+        'Lỗi',
+        error instanceof Error ? error.message : 'Không thể xác nhận đã nhận hàng. Vui lòng thử lại.'
+      );
+    }
+  };
+
+  const handleRequestReturn = async () => {
+    if (!order || !canRequestReturn()) return;
+
+    const reason = window.prompt('Vui lòng nhập lý do hoàn hàng:');
+    if (!reason) return;
+
+    try {
+      const response = await fetch(`/api/orders/${orderId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          status: 'RETURN_REQUESTED',
+          returnReason: reason,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Không thể gửi yêu cầu hoàn hàng');
+      }
+
+      toastSuccess('Đã gửi yêu cầu', 'Yêu cầu hoàn hàng của bạn đã được gửi tới hệ thống.');
+      mutate();
+    } catch (error) {
+      console.error('Error requesting return:', error);
+      toastError(
+        'Lỗi',
+        error instanceof Error ? error.message : 'Không thể gửi yêu cầu hoàn hàng. Vui lòng thử lại.'
+      );
+    }
+  };
+
   const getOrderTimeline = () => {
     if (!order) return [];
 
@@ -165,22 +273,31 @@ function OrderDetailContent() {
         status: 'PROCESSING',
         label: 'Đang xử lý đơn hàng',
         icon: Package,
-        completed: ['PROCESSING', 'SHIPPED', 'DELIVERED'].includes(order.status),
+        completed: ['PROCESSING', 'SHIPPED', 'DELIVERED', 'RECEIVED', 'RETURN_REQUESTED'].includes(order.status),
         date: order.status !== 'PENDING' ? order.updatedAt : null,
       },
       {
         status: 'SHIPPED',
-        label: 'Đã gửi hàng',
+        label: 'Đang giao hàng',
         icon: Truck,
-        completed: ['SHIPPED', 'DELIVERED'].includes(order.status),
-        date: ['SHIPPED', 'DELIVERED'].includes(order.status) ? order.updatedAt : null,
+        completed: ['SHIPPED', 'DELIVERED', 'RECEIVED', 'RETURN_REQUESTED'].includes(order.status),
+        date: ['SHIPPED', 'DELIVERED', 'RECEIVED', 'RETURN_REQUESTED'].includes(order.status)
+          ? order.updatedAt
+          : null,
       },
       {
         status: 'DELIVERED',
         label: 'Đã giao hàng',
         icon: CheckCircle,
-        completed: order.status === 'DELIVERED',
-        date: order.status === 'DELIVERED' ? order.updatedAt : null,
+        completed: ['DELIVERED', 'RECEIVED', 'RETURN_REQUESTED'].includes(order.status),
+        date: ['DELIVERED', 'RECEIVED', 'RETURN_REQUESTED'].includes(order.status) ? order.updatedAt : null,
+      },
+      {
+        status: 'RECEIVED',
+        label: 'Đã nhận hàng',
+        icon: CheckCircle,
+        completed: ['RECEIVED', 'RETURN_REQUESTED'].includes(order.status),
+        date: ['RECEIVED', 'RETURN_REQUESTED'].includes(order.status) ? order.updatedAt : null,
       },
     ];
 
@@ -247,14 +364,7 @@ function OrderDetailContent() {
                 Đơn hàng #{order.orderNumber}
               </h1>
               <p className="text-gray-600">
-                Đặt ngày:{' '}
-                {new Date(order.createdAt).toLocaleDateString('vi-VN', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                Đặt ngày: {formatDate(order.createdAt)}
               </p>
             </div>
             <div className="text-right">
@@ -353,13 +463,7 @@ function OrderDetailContent() {
                           </p>
                           {step.date && (
                             <p className="text-sm text-gray-500 mt-1">
-                              {new Date(step.date).toLocaleString('vi-VN', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              {formatDate(step.date)}
                             </p>
                           )}
                         </div>
@@ -407,10 +511,10 @@ function OrderDetailContent() {
                         </h3>
                       </Link>
                       <p className="text-sm text-gray-600 mb-2">
-                        Số lượng: {item.quantity} × {formatPrice(Number(item.price))}
+                        Số lượng: {item.quantity} × {formatPrice(item.price)}
                       </p>
                       <p className="text-lg font-bold text-blue-600">
-                        {formatPrice(Number(item.total))}
+                        {formatPrice(item.total)}
                       </p>
                     </div>
                   </div>
@@ -463,21 +567,27 @@ function OrderDetailContent() {
 
               <div className="space-y-4 mb-6">
                 <div className="space-y-2">
+                  {order.discount > 0 && (
+                    <div className="flex justify-between text-green-600">
+                      <span>Giảm giá</span>
+                      <span>-{formatPrice(order.discount)}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-gray-600">
                     <span>Tạm tính</span>
-                    <span>{formatPrice(Number(order.subtotal))}</span>
+                    <span>{formatPrice(order.subtotal)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Thuế (10%)</span>
-                    <span>{formatPrice(Number(order.tax))}</span>
+                    <span>{formatPrice(order.tax)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600">
                     <span>Phí vận chuyển</span>
-                    <span>{formatPrice(Number(order.shipping))}</span>
+                    <span>{formatPrice(order.shipping)}</span>
                   </div>
                   <div className="border-t border-gray-200 pt-3 flex justify-between text-lg font-bold text-gray-900">
                     <span>Tổng cộng</span>
-                    <span className="text-blue-600">{formatPrice(Number(order.total))}</span>
+                    <span className="text-blue-600">{formatPrice(order.total)}</span>
                   </div>
                 </div>
               </div>
@@ -587,7 +697,21 @@ function OrderDetailContent() {
                       Thử lại thanh toán
                     </Button>
                   )}
-                {order.status === 'DELIVERED' && (
+                {canConfirmReceived() && (
+                  <Button className="w-full bg-emerald-600 hover:bg-emerald-700" onClick={handleConfirmReceived}>
+                    Tôi đã nhận hàng
+                  </Button>
+                )}
+                {canRequestReturn() && (
+                  <Button
+                    variant="outline"
+                    className="w-full border-orange-400 text-orange-600 hover:bg-orange-50"
+                    onClick={handleRequestReturn}
+                  >
+                    Yêu cầu hoàn hàng
+                  </Button>
+                )}
+                {order.status === 'RECEIVED' && (
                   <Button className="w-full">Đánh giá sản phẩm</Button>
                 )}
                 {order.status === 'PENDING' && (
@@ -611,23 +735,6 @@ function OrderDetailContent() {
         </div>
       </div>
     </div>
-  );
-}
-
-export default function OrderDetailPage() {
-  return (
-    <Suspense fallback={
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex justify-center items-center min-h-[400px]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading order details...</p>
-          </div>
-        </div>
-      </div>
-    }>
-      <OrderDetailContent />
-    </Suspense>
   );
 }
 

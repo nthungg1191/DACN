@@ -24,20 +24,30 @@ export function Slider({
 }: SliderProps) {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = Number(e.target.value);
-    onValueChange([newValue, value[1]]);
+    // Đảm bảo min không vượt quá max hiện tại
+    const newMin = Math.min(newValue, value[1]);
+    onValueChange([newMin, value[1]]);
   };
 
   const handleChange2 = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newValue = Number(e.target.value);
-    onValueChange([value[0], newValue]);
+    // Đảm bảo max không nhỏ hơn min
+    // Cho phép max đạt được giá trị tối đa (max prop) ngay cả khi min đã được set
+    const newMax = Math.max(newValue, value[0]);
+    onValueChange([value[0], newMax]);
   };
 
-  const percentage1 = ((value[0] - min) / (max - min)) * 100;
-  const percentage2 = ((value[1] - min) / (max - min)) * 100;
+  // Tránh chia cho 0
+  const range = max - min;
+  // Tính percentage với offset để thumb không bị trượt ra ngoài
+  // Thumb có width 20px, cần offset để center của thumb nằm đúng vị trí
+  const thumbWidth = 20; // px
+  const percentage1 = range > 0 ? ((value[0] - min) / range) * 100 : 0;
+  const percentage2 = range > 0 ? ((value[1] - min) / range) * 100 : 100;
 
   return (
     <div className={cn('relative w-full', className)}>
-      <div className="relative h-2 bg-gray-200 rounded-full">
+      <div className="relative h-2 bg-gray-200 rounded-full" style={{ margin: '10px 0' }}>
         {/* Track between handles */}
         <div
           className="absolute h-2 bg-primary rounded-full"
@@ -56,9 +66,11 @@ export function Slider({
           value={value[0]}
           onChange={handleChange}
           disabled={disabled}
-          className="absolute top-0 w-full h-2 bg-transparent appearance-none cursor-pointer slider-thumb"
+          className="absolute top-0 w-full h-2 bg-transparent appearance-none cursor-pointer slider-thumb z-10"
           style={{
             background: 'transparent',
+            margin: 0,
+            padding: 0,
           }}
         />
         
@@ -71,14 +83,20 @@ export function Slider({
           value={value[1]}
           onChange={handleChange2}
           disabled={disabled}
-          className="absolute top-0 w-full h-2 bg-transparent appearance-none cursor-pointer slider-thumb"
+          className="absolute top-0 w-full h-2 bg-transparent appearance-none cursor-pointer slider-thumb z-20"
           style={{
             background: 'transparent',
+            margin: 0,
+            padding: 0,
           }}
         />
       </div>
       
       <style jsx>{`
+        .slider-thumb {
+          pointer-events: none;
+        }
+        
         .slider-thumb::-webkit-slider-thumb {
           appearance: none;
           height: 20px;
@@ -88,6 +106,14 @@ export function Slider({
           cursor: pointer;
           border: 2px solid white;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          pointer-events: all;
+          position: relative;
+          margin-top: -10px;
+        }
+        
+        .slider-thumb::-webkit-slider-runnable-track {
+          height: 2px;
+          background: transparent;
         }
         
         .slider-thumb::-moz-range-thumb {
@@ -98,6 +124,13 @@ export function Slider({
           cursor: pointer;
           border: 2px solid white;
           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+          pointer-events: all;
+          position: relative;
+        }
+        
+        .slider-thumb::-moz-range-track {
+          height: 2px;
+          background: transparent;
         }
         
         .slider-thumb:disabled::-webkit-slider-thumb {

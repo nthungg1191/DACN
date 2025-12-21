@@ -26,11 +26,11 @@ export async function GET(request: NextRequest) {
       data: addresses,
     });
   } catch (error) {
-    console.error('Error fetching addresses:', error);
+    console.error('lỗi khi lấy địa chỉ:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch addresses',
+        error: 'lỗi khi lấy địa chỉ',
       },
       { status: 500 }
     );
@@ -48,12 +48,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const addressSchema = z.object({
       fullName: z.string().min(1, 'Full name is required'),
-      phone: z.string().min(10, 'Phone number must be at least 10 digits'),
-      street: z.string().min(1, 'Street address is required'),
-      city: z.string().min(1, 'City is required'),
-      state: z.string().min(1, 'State/Province is required'),
-      postalCode: z.string().min(1, 'Postal code is required'),
-      country: z.string().min(1, 'Country is required'),
+      phone: z.string().min(10, 'số điện thoại phải có ít nhất 10 chữ số'),
+      street: z.string().min(1, 'địa chỉ là bắt buộc'),
+      city: z.string().min(1, 'thành phố là bắt buộc'),
+      state: z.string().min(1, 'tỉnh/thành phố là bắt buộc'),
+      postalCode: z.string().min(1, 'mã bưu điện là bắt buộc'),
+      country: z.string().min(1, 'quốc gia là bắt buộc'),
       isDefault: z.boolean().optional().default(false),
     });
 
@@ -82,25 +82,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: address,
-      message: 'Address created successfully',
+      message: 'địa chỉ đã được tạo thành công',
     }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Validation error',
+          error: 'lỗi khi tạo địa chỉ',
           details: error.errors,
         },
         { status: 400 }
       );
     }
 
-    console.error('Error creating address:', error);
+    console.error('lỗi khi tạo địa chỉ:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to create address',
+        error: 'lỗi khi tạo địa chỉ',
       },
       { status: 500 }
     );

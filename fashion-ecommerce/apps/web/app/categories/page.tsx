@@ -52,7 +52,7 @@ function CategoryCard({ category }: { category: CategoryNode }) {
 
         {category.children && category.children.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {category.children.slice(0, 5).map((child) => (
+            {category.children.slice(0, 5).map((child: any) => (
               <Link
                 key={child.id}
                 href={`/products?categories=${child.id}`}
@@ -120,7 +120,7 @@ export default function CategoriesPage() {
         <div className="text-center text-gray-500 py-16">Chưa có danh mục nào.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {categories.map((cat) => (
+          {categories.map((cat: any) => (
             <CategoryCard key={cat.id} category={cat} />
           ))}
         </div>

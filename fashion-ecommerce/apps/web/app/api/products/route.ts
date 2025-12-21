@@ -78,12 +78,14 @@ export async function GET(request: NextRequest) {
     const andConditions: any[] = [];
 
     // Search filter
+    // Chỉ tìm trong name và SKU để tránh kết quả không liên quan từ description
     if (query.search) {
+      const searchTerm = query.search.trim();
       andConditions.push({
         OR: [
-          { name: { contains: query.search, mode: 'insensitive' } },
-          { description: { contains: query.search, mode: 'insensitive' } },
-          { sku: { contains: query.search, mode: 'insensitive' } },
+          { name: { contains: searchTerm, mode: 'insensitive' } },
+          { sku: { contains: searchTerm, mode: 'insensitive' } },
+          { category: { name: { contains: searchTerm, mode: 'insensitive' } } },
         ],
       });
     }

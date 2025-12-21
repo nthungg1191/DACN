@@ -14,9 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@repo/database';
 import { cache } from '@/lib/redis';
-
-// Thời gian giữ order (mặc định 10 phút)
-const ORDER_EXPIRY_MINUTES = parseInt(process.env.ORDER_EXPIRY_MINUTES || '10');
+import { getSettings } from '@/lib/settings';
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,8 +24,9 @@ export async function POST(request: NextRequest) {
     //   return createUnauthorizedResponse();
     // }
 
+    const settings = await getSettings();
     const now = new Date();
-    const expiryTime = new Date(now.getTime() - ORDER_EXPIRY_MINUTES * 60 * 1000);
+    const expiryTime = new Date(now.getTime() - settings.orderExpiryMinutes * 60 * 1000);
 
     // Tìm các orders PENDING đã quá thời gian
     const expiredOrders = await prisma.order.findMany({
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Hủy orders và restore product quantities
     let restoredProductsCount = 0;
 
-    await prisma.$transaction(async (tx: any) => {
+    await prisma.$transaction(async (tx) => {
       for (const order of expiredOrders) {
         // Update order status
         await tx.order.update({
@@ -77,7 +76,7 @@ export async function POST(request: NextRequest) {
             paymentMetadata: {
               cancelledAt: now.toISOString(),
               reason: 'expired',
-              expiryMinutes: ORDER_EXPIRY_MINUTES,
+              expiryMinutes: settings.orderExpiryMinutes,
             },
           },
         });
@@ -101,13 +100,41 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    // Tự động chuyển các đơn đã giao hàng sang đã nhận hàng sau 7 ngày
+    const autoNow = new Date();
+    const sevenDaysAgo = new Date(autoNow.getTime() - 7 * 24 * 60 * 60 * 1000);
+
+    const autoReceivedOrders = await prisma.order.updateMany({
+      where: {
+        status: 'DELIVERED',
+        OR: [
+          {
+            deliveredAt: {
+              lte: sevenDaysAgo,
+            },
+          },
+          {
+            deliveredAt: null,
+            updatedAt: {
+              lte: sevenDaysAgo,
+            },
+          },
+        ],
+      },
+      data: {
+        status: 'RECEIVED',
+        receivedAt: autoNow,
+      },
+    });
+
     return NextResponse.json({
       success: true,
-      message: `Successfully cancelled ${expiredOrders.length} expired orders`,
+      message: `Successfully cancelled ${expiredOrders.length} expired orders and auto-completed ${autoReceivedOrders.count} delivered orders`,
       data: {
         expiredCount: expiredOrders.length,
         restoredProducts: restoredProductsCount,
-        expiryMinutes: ORDER_EXPIRY_MINUTES,
+        expiryMinutes: settings.orderExpiryMinutes,
+        autoReceivedCount: autoReceivedOrders.count,
       },
     });
   } catch (error) {
@@ -126,9 +153,9 @@ export async function POST(request: NextRequest) {
 // GET endpoint để check số lượng orders expired (không thực hiện cleanup)
 export async function GET(request: NextRequest) {
   try {
-    const ORDER_EXPIRY_MINUTES = parseInt(process.env.ORDER_EXPIRY_MINUTES || '10');
+    const settings = await getSettings();
     const now = new Date();
-    const expiryTime = new Date(now.getTime() - ORDER_EXPIRY_MINUTES * 60 * 1000);
+    const expiryTime = new Date(now.getTime() - settings.orderExpiryMinutes * 60 * 1000);
 
     const expiredCount = await prisma.order.count({
       where: {
@@ -144,16 +171,16 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         expiredCount,
-        expiryMinutes: ORDER_EXPIRY_MINUTES,
+        expiryMinutes: settings.orderExpiryMinutes,
         expiryTime: expiryTime.toISOString(),
       },
     });
   } catch (error) {
-    console.error('Error checking expired orders:', error);
+    console.error('Lỗi kiểm tra số lượng orders expired:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to check expired orders',
+        error: 'Lỗi kiểm tra số lượng orders expired',
       },
       { status: 500 }
     );

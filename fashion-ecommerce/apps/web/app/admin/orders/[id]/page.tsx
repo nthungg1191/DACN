@@ -36,13 +36,17 @@ async function getOrderDetail(orderId: string) {
     if (!order) return null;
 
     // Serialize Decimal fields to numbers for Client Component
+    const orderWithDiscount = order as typeof order & { discount?: any };
     return {
       ...order,
       subtotal: order.subtotal.toNumber(),
+      discount: orderWithDiscount.discount ? (typeof orderWithDiscount.discount === 'object' && 'toNumber' in orderWithDiscount.discount
+        ? orderWithDiscount.discount.toNumber()
+        : Number(orderWithDiscount.discount)) : 0,
       tax: order.tax.toNumber(),
       shipping: order.shipping.toNumber(),
       total: order.total.toNumber(),
-      items: order.items.map((item: any) => ({
+      items: order.items.map((item) => ({
         ...item,
         price: item.price.toNumber(),
         total: item.total.toNumber(),
@@ -53,6 +57,8 @@ async function getOrderDetail(orderId: string) {
             }
           : null,
       })),
+      createdAt: order.createdAt instanceof Date ? order.createdAt.toISOString() : order.createdAt,
+      updatedAt: order.updatedAt instanceof Date ? order.updatedAt.toISOString() : order.updatedAt,
     };
   } catch (error) {
     console.error('Error fetching order detail:', error);

@@ -4,7 +4,7 @@ export const SITE_DESCRIPTION = 'Thời trang hiện đại, phong cách trẻ t
 export const NAV_LINKS = [
   { href: '/', label: 'Trang chủ' },
   { href: '/products', label: 'Sản phẩm' },
-  { href: '/categories', label: 'Danh mục' },
+  { href: '/blog', label: 'Blog thời trang' },
   { href: '/about', label: 'Về chúng tôi' },
   { href: '/contact', label: 'Liên hệ' },
 ];

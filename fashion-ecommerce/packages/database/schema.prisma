@@ -22,35 +22,16 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
   sessions Session[]
   orders   Order[]
   reviews  Review[]
-  cart     Cart?
-  wishlist Wishlist[]
-  addresses Address[]
+  cart          Cart?
+  wishlist      Wishlist[]
+  addresses     Address[]
+  productViews  ProductView[]
+  searchQueries SearchQuery[]
 
   @@map("users")
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
 }
 
 model Session {
@@ -113,6 +94,7 @@ model Product {
   orderItems  OrderItem[]
   cartItems   CartItem[]
   wishlist    Wishlist[]
+  views       ProductView[]
   
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -204,6 +186,77 @@ model Wishlist {
   @@map("wishlists")
 }
 
+// Analytics: product views & search queries
+model ProductView {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("product_views")
+}
+
+model SearchQuery {
+  id           String   @id @default(cuid())
+  query        String
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  resultsCount Int?
+  createdAt    DateTime @default(now())
+
+  @@index([query])
+  @@index([createdAt])
+  @@map("search_queries")
+}
+
+// System Announcements / Notices
+model Announcement {
+  id          String          @id @default(cuid())
+  title       String
+  message     String          @db.Text
+  type        AnnouncementType @default(INFO)
+  ctaLabel    String?
+  ctaUrl      String?
+  active      Boolean         @default(true)
+  startAt     DateTime?
+  endAt       DateTime?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([active, startAt, endAt])
+  @@map("announcements")
+}
+
+// Coupons
+model Coupon {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  type            CouponType
+  value           Decimal     @db.Decimal(10, 2) // % hoặc số tiền giảm
+  minOrderAmount  Decimal?    @db.Decimal(10, 2) // Đơn hàng tối thiểu
+  maxDiscountAmount Decimal?  @db.Decimal(10, 2) // Giảm tối đa (cho PERCENTAGE)
+  usageLimit      Int?       // Số lần sử dụng tối đa (null = không giới hạn)
+  usedCount       Int         @default(0)
+  validFrom       DateTime
+  validUntil      DateTime
+  active          Boolean     @default(true)
+  description     String?     @db.Text
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  orders          Order[]
+
+  @@index([code])
+  @@index([active])
+  @@index([validFrom, validUntil])
+  @@map("coupons")
+}
+
 // Orders
 model Order {
   id              String      @id @default(cuid())
@@ -212,9 +265,12 @@ model Order {
   user            User        @relation(fields: [userId], references: [id])
   status          OrderStatus @default(PENDING)
   subtotal        Decimal     @db.Decimal(10, 2)
+  discount        Decimal     @db.Decimal(10, 2) @default(0) // Giảm giá từ coupon
   tax             Decimal     @db.Decimal(10, 2)
   shipping        Decimal     @db.Decimal(10, 2)
   total           Decimal     @db.Decimal(10, 2)
+  couponId        String?
+  coupon          Coupon?     @relation(fields: [couponId], references: [id])
   shippingAddress Json
   billingAddress  Json
   paymentMethod   String
@@ -225,6 +281,8 @@ model Order {
   paymentUrl      String?      // Payment URL (VNPay)
   paymentMetadata Json?        // Metadata từ gateway
   notes           String?     @db.Text
+  deliveredAt     DateTime?
+  receivedAt      DateTime?
   
   items           OrderItem[]
   createdAt       DateTime    @default(now())
@@ -232,6 +290,7 @@ model Order {
 
   @@index([userId])
   @@index([orderNumber])
+  @@index([couponId])
   @@map("orders")
 }
 
@@ -282,6 +341,8 @@ enum OrderStatus {
   PROCESSING
   SHIPPED
   DELIVERED
+  RECEIVED
+  RETURN_REQUESTED
   CANCELLED
 }
 
@@ -290,5 +351,65 @@ enum PaymentStatus {
   PAID
   FAILED
   REFUNDED
+}
+
+enum CouponType {
+  PERCENTAGE  // Giảm theo %
+  FIXED       // Giảm số tiền cố định
+}
+
+enum AnnouncementType {
+  INFO      // Thông tin chung
+  COUPON    // Mã giảm giá / ưu đãi
+  EVENT     // Sự kiện, campaign
+}
+
+// Settings - Cấu hình hệ thống
+model Settings {
+  id                    String   @id @default("settings")
+  
+  // Thông tin cửa hàng
+  storeName             String?  @default("Fashion Store")
+  storeLogo             String?
+  storeEmail            String?
+  storePhone            String?
+  storeAddress          String?  @db.Text
+  storeDescription      String?  @db.Text
+  facebookUrl           String?
+  instagramUrl          String?
+  tiktokUrl             String?
+  youtubeUrl            String?
+  
+  // Cấu hình thanh toán
+  paymentCodEnabled     Boolean  @default(true)
+  paymentBankTransferEnabled Boolean @default(true)
+  paymentCreditCardEnabled Boolean @default(true)
+  
+  // Cấu hình vận chuyển
+  shippingFee           Decimal  @db.Decimal(10, 2) @default(0)
+  freeShippingThreshold Decimal? @db.Decimal(10, 2) // Đơn tối thiểu để miễn phí ship
+  
+  // Cấu hình thuế
+  taxRate               Decimal  @db.Decimal(5, 2) @default(10.00) // VAT %
+  
+  // Cấu hình đơn hàng
+  orderExpiryMinutes    Int      @default(10) // Thời gian hết hạn đơn chưa thanh toán (phút)
+  
+  // Cấu hình hệ thống
+  currency              String   @default("VND")
+  timezone              String   @default("Asia/Ho_Chi_Minh")
+  language              String   @default("vi")
+  
+  // SEO
+  metaTitle             String?
+  metaDescription       String?  @db.Text
+  metaKeywords          String?  @db.Text
+  ogImage               String?
+  favicon               String?
+  
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@map("settings")
 }
 

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils';
 
 export interface FilterOptions {
   priceRange: [number, number];
-  brands: string[];
+  categories: string[];
   sizes: string[];
   colors: string[];
   ratings: number[];
@@ -29,7 +29,7 @@ interface FilterSidebarProps {
 }
 
 interface FilterOptionData {
-  brands: string[];
+  categories: Array<{ id: string; name: string; slug: string }>;
   sizes: string[];
   colors: Array<{ name: string; hex: string }>;
   priceRange: { min: number; max: number };
@@ -45,7 +45,7 @@ export function FilterSidebar({
   className = '',
 }: FilterSidebarProps) {
   const [filterOptions, setFilterOptions] = useState<FilterOptionData>({
-    brands: [],
+    categories: [],
     sizes: [],
     colors: [],
     priceRange: { min: 0, max: priceRangeMax },
@@ -54,7 +54,7 @@ export function FilterSidebar({
 
   const [expandedSections, setExpandedSections] = useState({
     price: true,
-    brands: true,
+    categories: true,
     sizes: true,
     colors: true,
     ratings: true,
@@ -69,9 +69,13 @@ export function FilterSidebar({
         const result = await response.json();
         if (result.success && result.data) {
           setFilterOptions(result.data);
+          // Nếu priceRange chưa được set hoặc đang là [0, 0], set về full range
+          if (filters.priceRange[0] === 0 && filters.priceRange[1] === 0 && result.data.priceRange) {
+            updateFilter('priceRange', [result.data.priceRange.min, result.data.priceRange.max]);
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch filter options:', error);
+        console.error('[FilterSidebar] Failed to fetch filter options:', error);
       } finally {
         setLoadingOptions(false);
       }
@@ -99,7 +103,7 @@ export function FilterSidebar({
     });
   };
 
-  const toggleArrayFilter = <K extends keyof Pick<FilterOptions, 'brands' | 'sizes' | 'colors' | 'ratings'>>(
+  const toggleArrayFilter = <K extends keyof Pick<FilterOptions, 'categories' | 'sizes' | 'colors' | 'ratings'>>(
     key: K,
     value: string | number
   ) => {
@@ -143,24 +147,52 @@ export function FilterSidebar({
 
           {/* Price Range */}
           <FilterSection
-            title="Price Range"
+            title="Khoảng giá"
             isExpanded={expandedSections.price}
             onToggle={() => toggleSection('price')}
           >
             <div className="space-y-4">
-              <div className="px-1">
+              <div className="px-2">
                 <Slider
                   value={filters.priceRange}
-                  onValueChange={(value) => updateFilter('priceRange', value as [number, number])}
+                  onValueChange={(value) => {
+                    const [min, max] = value as [number, number];
+                    const priceMin = filterOptions.priceRange.min || 0;
+                    const priceMax = filterOptions.priceRange.max || priceRangeMax;
+                    
+                    // Clamp min trong [priceMin, priceMax]
+                    let clampedMin = Math.max(priceMin, Math.min(min, priceMax));
+                    // Clamp max trong [priceMin, priceMax] - QUAN TRỌNG: KHÔNG dùng Math.max với priceMin để max có thể đạt được priceMax
+                    // Chỉ clamp max bởi priceMax, không clamp bởi priceMin
+                    let clampedMax = Math.min(max, priceMax);
+                    // Đảm bảo max >= priceMin (nếu max < priceMin thì set về priceMin)
+                    if (clampedMax < priceMin) {
+                      clampedMax = priceMin;
+                    }
+                    
+                    // QUAN TRỌNG: Nếu max gần với priceMax (trong vòng 0.5% hoặc 1000 đơn vị), tự động set về priceMax
+                    // Điều này đảm bảo có thể đạt được giá trị tối đa ngay cả khi step size không cho phép
+                    const threshold = Math.max(priceMax * 0.005, 1000); // 0.5% hoặc 1000, lấy giá trị lớn hơn
+                    if (clampedMax >= priceMax - threshold) {
+                      clampedMax = priceMax;
+                    }
+                    
+                    // Đảm bảo min <= max (nếu min > max thì điều chỉnh min xuống, KHÔNG điều chỉnh max)
+                    if (clampedMin > clampedMax) {
+                      clampedMin = clampedMax;
+                    }
+                    
+                    updateFilter('priceRange', [clampedMin, clampedMax]);
+                  }}
                   max={filterOptions.priceRange.max || priceRangeMax}
                   min={filterOptions.priceRange.min || 0}
-                  step={Math.max(1000, Math.floor((filterOptions.priceRange.max || priceRangeMax) / 100))}
+                  step={1}
                   className="w-full"
                 />
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
-                  <Label htmlFor="min-price" className="text-xs text-gray-500">Min (₫)</Label>
+                  <Label htmlFor="min-price" className="text-xs text-gray-500">Tối thiểu (₫)</Label>
                   <Input
                     id="min-price"
                     type="number"
@@ -168,15 +200,19 @@ export function FilterSidebar({
                     max={filterOptions.priceRange.max || priceRangeMax}
                     value={filters.priceRange[0]}
                     onChange={(e) => {
-                      const min = Math.max(filterOptions.priceRange.min || 0, Number(e.target.value) || 0);
-                      const max = Math.max(min, filters.priceRange[1]);
+                      const priceMin = filterOptions.priceRange.min || 0;
+                      const priceMax = filterOptions.priceRange.max || priceRangeMax;
+                      const inputValue = e.target.value === '' ? priceMin : Number(e.target.value);
+                      if (isNaN(inputValue)) return;
+                      const min = Math.max(priceMin, Math.min(inputValue, priceMax));
+                      const max = Math.max(min, Math.min(filters.priceRange[1], priceMax));
                       updateFilter('priceRange', [min, max]);
                     }}
                     className="text-sm"
                   />
                 </div>
                 <div className="flex-1">
-                  <Label htmlFor="max-price" className="text-xs text-gray-500">Max (₫)</Label>
+                  <Label htmlFor="max-price" className="text-xs text-gray-500">Tối đa (₫)</Label>
                   <Input
                     id="max-price"
                     type="number"
@@ -184,7 +220,11 @@ export function FilterSidebar({
                     max={filterOptions.priceRange.max || priceRangeMax}
                     value={filters.priceRange[1]}
                     onChange={(e) => {
-                      const max = Math.min(filterOptions.priceRange.max || priceRangeMax, Number(e.target.value) || filterOptions.priceRange.max || priceRangeMax);
+                      const priceMin = filterOptions.priceRange.min || 0;
+                      const priceMax = filterOptions.priceRange.max || priceRangeMax;
+                      const inputValue = e.target.value === '' ? priceMax : Number(e.target.value);
+                      if (isNaN(inputValue)) return;
+                      const max = Math.max(priceMin, Math.min(inputValue, priceMax));
                       const min = Math.min(filters.priceRange[0], max);
                       updateFilter('priceRange', [min, max]);
                     }}
@@ -195,27 +235,27 @@ export function FilterSidebar({
             </div>
           </FilterSection>
 
-          {/* Brands */}
+          {/* Categories */}
           <FilterSection
-            title="Brands"
-            isExpanded={expandedSections.brands}
-            onToggle={() => toggleSection('brands')}
+            title="Danh mục"
+            isExpanded={expandedSections.categories}
+            onToggle={() => toggleSection('categories')}
           >
             {loadingOptions ? (
-              <div className="text-sm text-gray-500">Loading brands...</div>
-            ) : filterOptions.brands.length === 0 ? (
-              <div className="text-sm text-gray-500">No brands available</div>
+              <div className="text-sm text-gray-500">Đang tải danh mục...</div>
+            ) : filterOptions.categories.length === 0 ? (
+              <div className="text-sm text-gray-500">Không có danh mục nào</div>
             ) : (
               <div className="space-y-2">
-                {filterOptions.brands.map(brand => (
-                  <div key={brand} className="flex items-center space-x-2">
+                {filterOptions.categories.map(category => (
+                  <div key={category.id} className="flex items-center space-x-2">
                     <Checkbox
-                      id={`brand-${brand}`}
-                      checked={filters.brands.includes(brand)}
-                      onCheckedChange={() => toggleArrayFilter('brands', brand)}
+                      id={`category-${category.id}`}
+                      checked={filters.categories.includes(category.id)}
+                      onCheckedChange={() => toggleArrayFilter('categories', category.id)}
                     />
-                    <Label htmlFor={`brand-${brand}`} className="text-sm">
-                      {brand}
+                    <Label htmlFor={`category-${category.id}`} className="text-sm">
+                      {category.name}
                     </Label>
                   </div>
                 ))}

@@ -67,6 +67,8 @@ export default function ProductDetailPage() {
   const { reviews, stats, isLoading: isReviewsLoading, mutate: mutateReviews } = useProductReviews(productId);
   const [rating, setRating] = useState<number>(5);
   const [comment, setComment] = useState<string>('');
+  const [ratingError, setRatingError] = useState<string | null>(null);
+  const [commentError, setCommentError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -159,6 +161,13 @@ export default function ProductDetailPage() {
         };
 
         setProduct(mappedProduct);
+
+        // Log product view (fire-and-forget, không chặn UI)
+        fetch('/api/analytics/product-view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId }),
+        }).catch(() => {});
         const colorImgs: Record<string, { id: string; url: string; alt: string }[]> = {};
         (mappedProduct.variants.colors || []).forEach((c: any) => {
           if (c.images && c.images.length > 0) {
@@ -280,11 +289,34 @@ export default function ProductDetailPage() {
 
   const handleLoadMoreReviews = () => {
     // Có thể triển khai phân trang sau
-    toast.info('Đang tải thêm đánh giá...');
+    toast.info('Đang tải thêm đánh giá...', {
+      description: 'Vui lòng đợi trong giây lát',
+    });
   };
 
   const handleSubmitReview = async () => {
     if (!productId) return;
+
+    // Inline validation
+    const newRatingError =
+      !rating || rating < 1 || rating > 5
+        ? 'Vui lòng chọn số sao từ 1 đến 5 trước khi gửi đánh giá.'
+        : null;
+    const newCommentError =
+      comment.length > 2000 ? 'Nhận xét quá dài (tối đa 2000 ký tự).' : null;
+
+    setRatingError(newRatingError);
+    setCommentError(newCommentError);
+
+    if (newRatingError || newCommentError) {
+      if (newRatingError) {
+        toast.warning('Thiếu thông tin đánh giá', { description: newRatingError });
+      } else if (newCommentError) {
+        toast.warning('Nhận xét không hợp lệ', { description: newCommentError });
+      }
+      return;
+    }
+
     setSubmitting(true);
     try {
       const response = await fetch(`/api/products/${productId}/reviews`, {
@@ -295,15 +327,52 @@ export default function ProductDetailPage() {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || 'Không thể gửi đánh giá');
+        // Handle different error types
+        if (response.status === 400) {
+          if (data.error?.includes('đã đánh giá')) {
+            toast.warning('Bạn đã đánh giá sản phẩm này', {
+              description: 'Mỗi sản phẩm chỉ có thể đánh giá một lần',
+            });
+          } else if (data.error?.includes('nhận hàng')) {
+            toast.warning('Chưa thể đánh giá', {
+              description: 'Bạn cần đã nhận hàng (trạng thái DELIVERED) để đánh giá sản phẩm này',
+            });
+          } else if (data.error?.includes('Dữ liệu không hợp lệ')) {
+            toast.error('Dữ liệu không hợp lệ', {
+              description: 'Vui lòng kiểm tra lại thông tin đánh giá của bạn',
+            });
+          } else {
+            toast.error(data.error || 'Không thể gửi đánh giá', {
+              description: 'Vui lòng thử lại sau',
+            });
+          }
+        } else if (response.status === 401) {
+          toast.error('Chưa đăng nhập', {
+            description: 'Vui lòng đăng nhập để đánh giá sản phẩm',
+          });
+        } else {
+          toast.error('Có lỗi xảy ra', {
+            description: data.error || 'Không thể gửi đánh giá. Vui lòng thử lại sau',
+          });
+        }
+        return;
       }
 
-      toast.success('Đã gửi đánh giá');
+      // Success
+      toast.success('Đánh giá đã được gửi thành công!', {
+        description: data.message || 'Cảm ơn bạn đã đánh giá sản phẩm. Đánh giá của bạn sẽ được hiển thị ngay.',
+        duration: 4000,
+      });
+      
       setComment('');
       setRating(5);
-      mutateReviews(); // refresh list
+      
+      // Force revalidate reviews to show the new review immediately
+      await mutateReviews();
     } catch (error: any) {
-      toast.error(error.message || 'Không thể gửi đánh giá');
+      toast.error('Lỗi kết nối', {
+        description: error.message || 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối internet và thử lại',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -481,16 +550,30 @@ export default function ProductDetailPage() {
                         </div>
                         <span className="text-sm text-gray-600">{rating}/5</span>
                       </div>
+                      {ratingError && (
+                        <p className="text-xs text-red-500 mt-1">{ratingError}</p>
+                      )}
 
                       <div className="space-y-1">
-                        <Label htmlFor="comment" className="text-sm text-gray-700">Nhận xét (tuỳ chọn)</Label>
+                        <Label htmlFor="comment" className="text-sm text-gray-700">
+                          Nhận xét (tuỳ chọn)
+                        </Label>
                         <Textarea
                           id="comment"
                           value={comment}
-                          onChange={(e) => setComment(e.target.value)}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setComment(value);
+                            if (commentError && value.length <= 2000) {
+                              setCommentError(null);
+                            }
+                          }}
                           placeholder="Chia sẻ trải nghiệm sản phẩm..."
                           rows={4}
                         />
+                        {commentError && (
+                          <p className="text-xs text-red-500 mt-1">{commentError}</p>
+                        )}
                       </div>
 
                       <Button onClick={handleSubmitReview} disabled={submitting} className="mt-1">

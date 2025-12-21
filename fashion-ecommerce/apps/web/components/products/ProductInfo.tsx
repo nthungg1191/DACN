@@ -1,11 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Star, Heart, ShoppingCart, Share2, Truck, Shield, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
-import { cn } from '@/lib/utils';
+import { cn, formatPrice } from '@/lib/utils';
 import { getColorHex } from '@/lib/utils/color-mapper';
+import { LoginRequiredModal } from '@/components/modals/LoginRequiredModal';
 
 interface ProductVariant {
   id: string;
@@ -53,12 +55,20 @@ export function ProductInfo({
   onColorChange,
   className 
 }: ProductInfoProps) {
+  const { data: session, status } = useSession();
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [quantity, setQuantity] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const handleAddToCart = () => {
+    // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
+    if (status === 'unauthenticated') {
+      setShowLoginModal(true);
+      return;
+    }
+
     const variant = {
       size: selectedSize,
       color: selectedColor,
@@ -68,6 +78,12 @@ export function ProductInfo({
   };
 
   const handleWishlist = () => {
+    // Kiểm tra đăng nhập trước khi thêm vào wishlist
+    if (status === 'unauthenticated') {
+      setShowLoginModal(true);
+      return;
+    }
+
     setIsWishlisted(!isWishlisted);
     onAddToWishlist(product.id);
   };
@@ -76,14 +92,20 @@ export function ProductInfo({
     onShare(product.id);
   };
 
+  const hasColors = (product.variants?.colors?.length || 0) > 0;
+
   const sizesForSelectedColor =
     product.variants?.colors?.find((c) => c.name === selectedColor)?.sizes || [];
 
   const selectedSizeObj = sizesForSelectedColor.find((s) => s.value === selectedSize);
-  const availableQuantity = selectedSizeObj?.quantity ?? 0;
+
+  // Nếu sản phẩm không có biến thể màu/size, dùng tồn kho chung
+  const baseAvailableQuantity = product.stockCount ?? 0;
+  const availableQuantity = hasColors ? selectedSizeObj?.quantity ?? 0 : baseAvailableQuantity;
+
   const isInStock = availableQuantity > 0;
-  const hasColors = (product.variants?.colors?.length || 0) > 0;
   const isColorSelected = !hasColors || !!selectedColor;
+  const isSizeRequired = hasColors && sizesForSelectedColor.length > 0;
 
   const currentPrice = selectedSizeObj?.price ?? product.price;
   const discountPercentage =
@@ -139,12 +161,12 @@ export function ProductInfo({
         {/* Price */}
         <div className="flex items-center space-x-3 mb-4">
           <span className="text-3xl font-bold text-gray-900">
-            ${currentPrice.toFixed(2)}
+            {formatPrice(currentPrice)}
           </span>
           {product.originalPrice && product.originalPrice > currentPrice && (
             <>
               <span className="text-xl text-gray-500 line-through">
-                ${product.originalPrice.toFixed(2)}
+                {formatPrice(product.originalPrice)}
               </span>
               <Badge variant="destructive" className="text-sm">
                 -{discountPercentage}%
@@ -158,7 +180,7 @@ export function ProductInfo({
       </div>
 
       {/* Variants */}
-      {product.variants && (
+      {product.variants && hasColors && (
         <div className="space-y-4">
           {/* Sizes */}
           {sizesForSelectedColor.length > 0 && (
@@ -279,28 +301,28 @@ export function ProductInfo({
       </div>
 
       {/* Stock Status */}
-          <div className="flex items-center space-x-2">
-            {isInStock ? (
-              <span className="text-sm text-green-600 font-medium">
-                Còn hàng ({availableQuantity} sản phẩm)
-              </span>
-            ) : (
-              <span className="text-sm text-red-600 font-medium">
-                {!selectedSize ? 'Chọn kích cỡ' : 'Hết hàng'}
-              </span>
-            )}
-          </div>
+      <div className="flex items-center space-x-2">
+        {isInStock ? (
+          <span className="text-sm text-green-600 font-medium">
+            Còn hàng ({availableQuantity} sản phẩm)
+          </span>
+        ) : (
+          <span className="text-sm text-red-600 font-medium">
+            {isSizeRequired && !selectedSize ? 'Chọn kích cỡ' : 'Hết hàng'}
+          </span>
+        )}
+      </div>
 
       {/* Action Buttons */}
       <div className="space-y-3">
         <div className="flex space-x-3">
-            <Button
-              data-testid="add-to-cart-button"
-              onClick={handleAddToCart}
-              disabled={!selectedSize || !isInStock || !isColorSelected}
-              className="flex-1"
-              size="lg"
-            >
+          <Button
+            data-testid="add-to-cart-button"
+            onClick={handleAddToCart}
+            disabled={!isInStock || (isSizeRequired && !selectedSize) || !isColorSelected}
+            className="flex-1"
+            size="lg"
+          >
             <ShoppingCart className="w-4 h-4 mr-2" />
             Thêm vào giỏ
           </Button>
@@ -362,6 +384,14 @@ export function ProductInfo({
           SKU: {product.sku}
         </div>
       )}
+
+      {/* Login Required Modal */}
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        message="Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng"
+        callbackUrl={`/products/${product.id}`}
+      />
     </div>
   );
 }

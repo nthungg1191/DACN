@@ -1,13 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Heart, ShoppingCart, Star, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useApp } from '@/hooks/useApp';
 import { Product } from '@/types/product';
+import { formatPrice } from '@/lib/utils';
+import { LoginRequiredModal } from '@/components/modals/LoginRequiredModal';
 
 interface ProductCardProps {
   product: Product;
@@ -15,7 +18,9 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, className = '' }: ProductCardProps) {
+  const { data: session, status } = useSession();
   const { cart, wishlist, addToCart, addToWishlist, removeFromWishlist } = useApp();
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const isInWishlist = wishlist.items.some(item => item.productId === product.id);
   const isInCart = cart.items.some(item => item.productId === product.id);
@@ -24,9 +29,37 @@ export function ProductCard({ product, className = '' }: ProductCardProps) {
   const rawImage = product.images[0];
   const productImage = rawImage || DEFAULT_PLACEHOLDER;
 
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
+    if (status === 'unauthenticated') {
+      setShowLoginModal(true);
+      return;
+    }
+
+    addToCart({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      originalPrice: product.originalPrice,
+      image: productImage,
+      quantity: 1,
+      maxQuantity: 10,
+    });
+  };
+
   const handleToggleWishlist = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    // Kiểm tra đăng nhập trước khi thêm vào wishlist
+    if (status === 'unauthenticated') {
+      setShowLoginModal(true);
+      return;
+    }
+
     if (isInWishlist) {
       removeFromWishlist(product.id);
     } else {
@@ -139,16 +172,24 @@ export function ProductCard({ product, className = '' }: ProductCardProps) {
           {/* Price */}
           <div className="flex items-center gap-2 mb-3">
             <span className="text-lg font-semibold text-gray-900">
-              ${product.price.toFixed(2)}
+              {formatPrice(product.price)}
             </span>
             {product.originalPrice && product.originalPrice > product.price && (
               <span className="text-sm text-gray-500 line-through">
-                ${product.originalPrice.toFixed(2)}
+                {formatPrice(product.originalPrice)}
               </span>
             )}
           </div>
         </div>
       </Link>
+
+      {/* Login Required Modal */}
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        message="Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng"
+        callbackUrl={`/products/${product.id}`}
+      />
     </div>
   );
 }

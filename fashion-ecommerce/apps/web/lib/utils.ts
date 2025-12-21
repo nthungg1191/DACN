@@ -23,6 +23,7 @@ export function formatDate(date: Date | string): string {
 /**
  * Handle 401 Unauthorized response - redirects to login
  * Use this in components that make direct fetch calls
+ * Chỉ redirect khi đang ở trang yêu cầu authentication
  */
 export function handleUnauthorizedResponse() {
   if (typeof window === 'undefined') return;
@@ -35,6 +36,19 @@ export function handleUnauthorizedResponse() {
   
   if (isSigninPage || isAdminLoginPage || isAdminRoute) {
     return;
+  }
+  
+  // Chỉ redirect khi đang ở trang yêu cầu authentication
+  // Không redirect khi ở trang public như /, /products, /products/[id]
+  const requiresAuth = 
+    currentPath.startsWith('/checkout') ||
+    currentPath.startsWith('/orders') ||
+    currentPath.startsWith('/profile') ||
+    currentPath.startsWith('/addresses') ||
+    currentPath.startsWith('/payment');
+  
+  if (!requiresAuth) {
+    return; // Không redirect khi ở trang public
   }
   
   const callbackUrl = currentPath + window.location.search;

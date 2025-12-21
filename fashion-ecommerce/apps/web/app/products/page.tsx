@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useApp } from '@/hooks/useApp';
 import { ProductGrid } from '@/components/products/ProductGrid';
@@ -8,7 +9,7 @@ import { Pagination } from '@/components/ui/Pagination';
 import { SearchBar } from '@/components/ui/SearchBar';
 import { FilterSidebar, FilterOptions } from '@/components/ui/FilterSidebar';
 import { Button } from '@/components/ui/Button';
-import { Filter, Grid, List } from 'lucide-react';
+import { Filter, Grid, List, Home } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductFilters, ProductSort } from '@/contexts/ProductContext';
 
@@ -22,7 +23,7 @@ const sortOptions = [
   { value: 'rating', label: 'Highest Rated' },
 ];
 
-function ProductsContent() {
+export default function ProductsPage() {
   const { 
     products, 
     loading, 
@@ -43,7 +44,7 @@ function ProductsContent() {
   
   const defaultFilters: FilterOptions = {
     priceRange: [0, 0], // Will be set from API
-    brands: [],
+    categories: [],
     sizes: [],
     colors: [],
     ratings: [],
@@ -63,13 +64,14 @@ function ProductsContent() {
           const { min, max } = result.data.priceRange;
           setPriceRangeMax(max);
           // Set default price range to full range
+          const newPriceRange: [number, number] = [min, max];
           setFilters(prev => ({
             ...prev,
-            priceRange: [min, max],
+            priceRange: newPriceRange,
           }));
         }
       } catch (error) {
-        console.error('Failed to fetch price range:', error);
+        console.error('[ProductsPage] Failed to fetch price range:', error);
       }
     };
     fetchPriceRange();
@@ -101,7 +103,7 @@ function ProductsContent() {
     const isFullPriceRange = f.priceRange[0] === 0 && f.priceRange[1] >= priceRangeMax;
     
     return {
-      brands: f.brands,
+      categories: f.categories,
       sizes: f.sizes,
       colors: f.colors,
       ratings: f.ratings,
@@ -197,7 +199,7 @@ function ProductsContent() {
   // Get active filters count
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (filters.brands.length > 0) count++;
+    if (filters.categories.length > 0) count++;
     if (filters.sizes.length > 0) count++;
     if (filters.colors.length > 0) count++;
     if (filters.ratings.length > 0) count++;
@@ -211,12 +213,17 @@ function ProductsContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
+        {/* Breadcrumb + Title */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Products</h1>
-          <p className="text-gray-600">
-            Khám phá bộ sưu tập thời trang mới nhất
-          </p>
+          <nav className="mb-2 flex items-center gap-2 text-sm text-gray-600">
+            <Link href="/" className="flex items-center gap-1 hover:text-gray-900 transition-colors">
+              <Home size={16} />
+              <span>Trang chủ</span>
+            </Link>
+            <span className="text-gray-400">/</span>
+            <span className="text-gray-900 font-medium">Sản phẩm</span>
+          </nav>
+          <h1 className="text-3xl font-bold text-gray-900">Sản phẩm</h1>
         </div>
 
         {/* Search and Filters */}
@@ -333,20 +340,5 @@ function ProductsContent() {
         />
       </div>
     </div>
-  );
-}
-
-export default function ProductsPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading products...</p>
-        </div>
-      </div>
-    }>
-      <ProductsContent />
-    </Suspense>
   );
 }

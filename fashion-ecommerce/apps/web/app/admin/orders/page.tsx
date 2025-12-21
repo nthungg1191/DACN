@@ -3,9 +3,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@repo/database';
 import { OrdersFilters } from '@/components/admin/orders/OrdersFilters';
-import { Suspense } from 'react';
-
-export const dynamic = 'force-dynamic';
 
 async function getOrders(
   page: number = 1,
@@ -162,9 +159,7 @@ export default async function AdminOrdersPage({
         </div>
 
         {/* Filters */}
-        <Suspense fallback={<div className="bg-white rounded-lg shadow p-4">Loading filters...</div>}>
-          <OrdersFilters />
-        </Suspense>
+        <OrdersFilters />
 
         {/* Orders Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">

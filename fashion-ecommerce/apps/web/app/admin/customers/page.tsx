@@ -3,8 +3,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@repo/database';
 
-export const dynamic = 'force-dynamic';
-
 async function getCustomers(page: number = 1, limit: number = 20, search?: string) {
   try {
     const skip = (page - 1) * limit;
@@ -83,7 +81,7 @@ async function getCustomers(page: number = 1, limit: number = 20, search?: strin
 export default async function AdminCustomersPage({
   searchParams,
 }: {
-  searchParams: { page?: string; search?: string };
+  searchParams: Promise<{ page?: string; search?: string }>;
 }) {
   try {
     await requireAdmin();
@@ -91,8 +89,9 @@ export default async function AdminCustomersPage({
     redirect('/admin/login?callbackUrl=/admin/customers');
   }
 
-  const page = parseInt(searchParams.page || '1');
-  const { customers, pagination } = await getCustomers(page, 20, searchParams.search);
+  const resolvedSearchParams = await searchParams;
+  const page = parseInt(resolvedSearchParams.page || '1');
+  const { customers, pagination } = await getCustomers(page, 20, resolvedSearchParams.search);
 
   const formatCurrency = (amount: number | null | any) => {
     if (!amount) return '0 ₫';
@@ -121,7 +120,7 @@ export default async function AdminCustomersPage({
           type="text"
           placeholder="Tìm kiếm khách hàng..."
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          defaultValue={searchParams.search || ''}
+          defaultValue={resolvedSearchParams.search || ''}
         />
       </div>
 

@@ -16,13 +16,12 @@ const querySchema = z.object({
   featured: z.string().optional(),
 });
 
-export async function GET (
+export async function GET(
   request: NextRequest,
-  { params }: any
-) {
-  const categoryId = params.id;
+  { params }: { params: Promise<{ id: string }> }
+) { 
   try {
-    const { id } = paramsSchema.parse(params);
+    const { id } = paramsSchema.parse(await params);
     const { searchParams } = new URL(request.url);
     const query = querySchema.parse(Object.fromEntries(searchParams));
 
@@ -51,7 +50,7 @@ export async function GET (
     }
 
     // Get all category IDs (current category + its children)
-    const categoryIds = [id, ...category.children.map((child: any) => child.id)];
+    const categoryIds = [id, ...category.children.map(child => child.id)];
 
     // Build where clause
     const where: any = {

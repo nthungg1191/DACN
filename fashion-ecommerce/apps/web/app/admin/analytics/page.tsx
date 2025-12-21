@@ -2,8 +2,6 @@ import { requireAdmin } from '@/lib/auth-server';
 import { redirect } from 'next/navigation';
 import { prisma } from '@repo/database';
 
-export const dynamic = 'force-dynamic';
-
 async function getAnalytics() {
   try {
     const [
@@ -34,7 +32,7 @@ async function getAnalytics() {
       totalOrders,
       totalCustomers,
       averageOrderValue: averageOrderValue._avg.total || 0,
-      ordersByStatus: ordersByStatus.map((item: { status: string; _count: { id: number } }) => ({
+      ordersByStatus: ordersByStatus.map((item) => ({
         status: item.status,
         count: item._count.id,
       })),
@@ -149,7 +147,7 @@ export default async function AdminAnalyticsPage() {
         </div>
         <div className="p-6">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {analytics.ordersByStatus.map((item: { status: string; count: number }) => (
+            {analytics.ordersByStatus.map((item) => (
               <div key={item.status} className="text-center">
                 <p className="text-2xl font-bold text-gray-900">{item.count}</p>
                 <p className="text-sm text-gray-500 mt-1">{item.status}</p>

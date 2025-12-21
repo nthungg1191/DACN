@@ -15,6 +15,7 @@ import {
   LogOut,
   X,
   Home,
+  Ticket,
   LucideIcon,
 } from 'lucide-react';
 
@@ -35,7 +36,9 @@ const adminMenuItems: MenuItem[] = [
   { href: '/admin/products', label: 'Sản phẩm', icon: Package },
   { href: '/admin/categories', label: 'Danh mục', icon: FolderTree },
   { href: '/admin/customers', label: 'Khách hàng', icon: Users },
-  { href: '/admin/analytics', label: 'Báo cáo', icon: BarChart3 },
+  { href: '/admin/coupons', label: 'Mã giảm giá', icon: Ticket },
+  { href: '/admin/announcements', label: 'Thông báo', icon: BarChart3 },
+  { href: '/admin/reports', label: 'Báo cáo', icon: BarChart3 },
   { href: '/admin/settings', label: 'Cài đặt', icon: Settings },
 ];
 

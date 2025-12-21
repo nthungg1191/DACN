@@ -28,6 +28,8 @@ interface AddressFormProps {
 export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) {
   const { success: toastSuccess, error: toastError } = useToast();
   const [loading, setLoading] = useState(false);
+  const [provinces, setProvinces] = useState<string[]>([]);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [formData, setFormData] = useState<Omit<Address, 'id'>>({
     fullName: '',
     phone: '',
@@ -54,16 +56,65 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
     }
   }, [address]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
+  // Load provinces list from API
+  useEffect(() => {
+    async function loadProvinces() {
+      try {
+        const res = await fetch('/api/locations/vietnam');
+        if (!res.ok) return;
+        const json = await res.json();
+        const list = (json?.data as { name: string }[] | undefined)?.map((p) => p.name) ?? [];
+        setProvinces(list);
+
+        // Nếu chưa có state nhưng có danh sách tỉnh, set mặc định
+        if (!address && list.length > 0) {
+          setFormData((prev) => ({
+            ...prev,
+            state: prev.state || list[0],
+          }));
+        }
+      } catch (e) {
+        console.error('Failed to load provinces', e);
+      }
+    }
+
+    loadProvinces();
+  }, [address]);
+
+  const validatePhone = (value: string): string | null => {
+    if (!value) return 'Số điện thoại là bắt buộc';
+    const regex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+    if (!regex.test(value)) {
+      return 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 03, 05, 07, 08 hoặc 09)';
+    }
+    return null;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target as HTMLInputElement;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
     }));
+
+    // Validate realtime cho field phone
+    if (name === 'phone') {
+      setPhoneError(validatePhone(value));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate phone number trước khi gọi API (và show lỗi ngay dưới field)
+    const phoneValidation = validatePhone(formData.phone);
+    setPhoneError(phoneValidation);
+    if (phoneValidation) {
+      // Optional: thêm toast để nhấn mạnh
+      toastError('Lỗi', phoneValidation);
+      return;
+    }
     setLoading(true);
 
     try {
@@ -125,7 +176,11 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
           onChange={handleChange}
           required
           placeholder="Nhập số điện thoại"
+          className={phoneError ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
         />
+        {phoneError && (
+          <p className="mt-1 text-sm text-red-500">{phoneError}</p>
+        )}
       </div>
 
       <div>
@@ -142,26 +197,44 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label htmlFor="city">Thành phố *</Label>
+          <Label htmlFor="city">Quận/Huyện</Label>
           <Input
             id="city"
             name="city"
             value={formData.city}
             onChange={handleChange}
             required
-            placeholder="Thành phố"
+            placeholder="Quận/Huyện"
           />
         </div>
         <div>
           <Label htmlFor="state">Tỉnh/Thành phố *</Label>
-          <Input
-            id="state"
-            name="state"
-            value={formData.state}
-            onChange={handleChange}
-            required
-            placeholder="Tỉnh/Thành phố"
-          />
+          {provinces.length > 0 ? (
+            <select
+              id="state"
+              name="state"
+              value={formData.state}
+              onChange={handleChange}
+              required
+              className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value="">Chọn Tỉnh</option>
+              {provinces.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <Input
+              id="state"
+              name="state"
+              value={formData.state}
+              onChange={handleChange}
+              required
+              placeholder="Tỉnh/Thành phố"
+            />
+          )}
         </div>
       </div>
 

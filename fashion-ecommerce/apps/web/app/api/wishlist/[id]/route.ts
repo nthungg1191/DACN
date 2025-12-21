@@ -10,9 +10,8 @@ const paramsSchema = z.object({
 // DELETE /api/wishlist/[id] - Remove item from wishlist
 export async function DELETE(
   request: NextRequest,
-  { params }: any
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const wishlistItemId = params.id;
   try {
     const user = await getCurrentUser();
     

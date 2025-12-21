@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@repo/database';
 import * as bcrypt from 'bcryptjs';
 import { z } from 'zod';
+import { sendRegistrationEmail } from '@/lib/email';
 
 const registerSchema = z.object({
   name: z.string().min(2, 'Tên phải có ít nhất 2 ký tự'),
@@ -46,10 +47,16 @@ export async function POST(request: Request) {
       },
     });
 
+    // Send registration confirmation email (don't await to not block response)
+    sendRegistrationEmail(user.email, user.name || 'User').catch((error) => {
+      console.error('lỗi khi gửi email đăng ký:', error);
+      // Don't fail registration if email fails
+    });
+
     return NextResponse.json(
       {
         success: true,
-        message: 'Đăng ký thành công',
+        message: 'Đăng ký thành công. Vui lòng kiểm tra email để xác nhận.',
         data: user,
       },
       { status: 201 }

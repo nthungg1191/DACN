@@ -39,8 +39,8 @@ export function ProductGrid({
   if (!products || products.length === 0) {
     return (
       <div className="text-center py-12">
-        <div className="text-gray-500 text-lg mb-2">No products found</div>
-        <p className="text-gray-400">Try adjusting your search or filter criteria</p>
+        <div className="text-gray-500 text-lg mb-2">Không tìm thấy sản phẩm</div>
+        <p className="text-gray-400">Hãy thử tìm kiếm lại hoặc lọc theo tiêu chí khác</p>
       </div>
     );
   }

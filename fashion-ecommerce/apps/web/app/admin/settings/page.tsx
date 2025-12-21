@@ -1,7 +1,6 @@
 import { requireAdmin } from '@/lib/auth-server';
 import { redirect } from 'next/navigation';
-
-export const dynamic = 'force-dynamic';
+import { SettingsClient } from '@/components/admin/settings/SettingsClient';
 
 export default async function AdminSettingsPage() {
   try {
@@ -17,9 +16,7 @@ export default async function AdminSettingsPage() {
         <p className="text-gray-600 mt-1">Cấu hình hệ thống</p>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <p className="text-gray-500">Tính năng đang được phát triển...</p>
-      </div>
+      <SettingsClient />
     </div>
   );
 }

@@ -199,7 +199,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                   const cartItems = JSON.parse(savedCart);
                   dispatch({ type: 'SET_CART', payload: cartItems });
                 } catch (error) {
-                  console.error('Error loading cart from localStorage:', error);
+                  console.error('Lỗi tải giỏ hàng từ localStorage:', error);
                   dispatch({ type: 'SET_LOADING', payload: false });
                 }
               } else {
@@ -208,7 +208,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             }
             return;
           }
-          throw new Error('Failed to fetch cart');
+          throw new Error('Lỗi tải giỏ hàng');
         }
 
         const data = await response.json();
@@ -221,7 +221,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
       } catch (error) {
-        console.error('Error fetching cart:', error);
+        console.error('Lỗi tải giỏ hàng:', error);
         // Fallback to localStorage if API fails
         if (typeof window !== 'undefined') {
           const savedCart = localStorage.getItem('cart');
@@ -230,7 +230,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               const cartItems = JSON.parse(savedCart);
               dispatch({ type: 'SET_CART', payload: cartItems });
             } catch (parseError) {
-              console.error('Error loading cart from localStorage:', parseError);
+              console.error('Lỗi tải giỏ hàng từ localStorage:', parseError);
               dispatch({ type: 'SET_ERROR', payload: 'Failed to load cart' });
             }
           } else {
@@ -274,7 +274,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to add item to cart');
+        throw new Error('Thêm sản phẩm thất bại');
       }
 
       // Fetch updated cart from server to ensure sync
@@ -290,16 +290,16 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: false });
 
       toast({
-        title: 'Added to Cart',
-        description: `${item.name} has been added to your cart`,
+        title: 'Thêm sản phẩm thành công ',
+        description: `${item.name} đã được thêm vào giỏ hàng của bạn`,
         type: 'success',
       });
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to add item to cart' });
+      dispatch({ type: 'SET_ERROR', payload: 'Thêm sản phẩm thất bại' });
       dispatch({ type: 'SET_LOADING', payload: false });
       toast({
-        title: 'Error',
-        description: 'Failed to add item to cart. Please try again.',
+        title: 'Lỗi',
+        description: 'Thêm sản phẩm thất bại. Vui lòng thử lại.',
         type: 'error',
       });
     }
@@ -325,15 +325,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
 
       toast({
-        title: 'Removed from Cart',
-        description: 'Item has been removed from your cart',
+        title: 'Xóa sản phẩm thành công',
+        description: 'Sản phẩm đã được xóa khỏi giỏ hàng của bạn',
         type: 'success',
       });
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to remove item from cart' });
+      dispatch({ type: 'SET_ERROR', payload: 'Xóa sản phẩm thất bại' });
       toast({
-        title: 'Error',
-        description: 'Failed to remove item from cart. Please try again.',
+        title: 'Lỗi',
+        description: 'Xóa sản phẩm thất bại. Vui lòng thử lại.',
         type: 'error',
       });
     }
@@ -360,10 +360,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to update quantity' });
+      dispatch({ type: 'SET_ERROR', payload: 'Cập nhật số lượng thất bại' });
       toast({
-        title: 'Error',
-        description: 'Failed to update quantity. Please try again.',
+        title: 'Lỗi',
+        description: 'Cập nhật số lượng thất bại. Vui lòng thử lại.',
         type: 'error',
       });
     }
@@ -377,7 +377,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to clear cart');
+        throw new Error('Xóa giỏ hàng thất bại');
       }
 
       // Clear local state immediately after successful API response
@@ -386,15 +386,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'SYNC_CART' });
 
       toast({
-        title: 'Cart Cleared',
-        description: 'Your cart has been cleared',
+        title: 'Xóa giỏ hàng thành công',
+        description: 'Giỏ hàng đã được xóa khỏi giỏ hàng của bạn',
         type: 'success',
       });
     } catch (error) {
-      dispatch({ type: 'SET_ERROR', payload: 'Failed to clear cart' });
+      dispatch({ type: 'SET_ERROR', payload: 'Xóa giỏ hàng thất bại' });
       toast({
-        title: 'Error',
-        description: 'Failed to clear cart. Please try again.',
+        title: 'Lỗi',
+        description: 'Xóa giỏ hàng thất bại. Vui lòng thử lại.',
         type: 'error',
       });
     }

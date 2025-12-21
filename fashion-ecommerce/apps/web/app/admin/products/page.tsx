@@ -3,9 +3,6 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@repo/database';
 import { ProductsFilters } from '@/components/admin/products/ProductsFilters';
-import { Suspense } from 'react';
-
-export const dynamic = 'force-dynamic';
 
 async function getProducts(page: number = 1, limit: number = 20, search?: string, categoryId?: string, published?: string) {
   try {
@@ -55,7 +52,7 @@ async function getProducts(page: number = 1, limit: number = 20, search?: string
       }),
     ]);
 
-    const products = rawProducts.map((p: any) => ({
+    const products = rawProducts.map((p) => ({
       ...p,
       price: p.price.toNumber ? p.price.toNumber() : Number(p.price),
       comparePrice: p.comparePrice ? (p.comparePrice.toNumber ? p.comparePrice.toNumber() : Number(p.comparePrice)) : null,
@@ -119,9 +116,7 @@ export default async function AdminProductsPage({
       </div>
 
       {/* Filters */}
-      <Suspense fallback={<div className="bg-white rounded-lg shadow p-4">Loading filters...</div>}>
-        <ProductsFilters categories={categories} />
-      </Suspense>
+      <ProductsFilters categories={categories} />
 
       {/* Products Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">

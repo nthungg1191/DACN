@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
@@ -9,16 +9,39 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Mail, Lock, Shield, AlertCircle, ArrowRight } from 'lucide-react';
 
-function AdminLoginContent() {
+export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Inline validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const newEmailError = !email
+      ? 'Email là bắt buộc'
+      : !emailRegex.test(email)
+      ? 'Email không hợp lệ'
+      : null;
+    const newPasswordError = !password
+      ? 'Mật khẩu là bắt buộc'
+      : password.length < 6
+      ? 'Mật khẩu phải có ít nhất 6 ký tự'
+      : null;
+
+    setEmailError(newEmailError);
+    setPasswordError(newPasswordError);
+
+    if (newEmailError || newPasswordError) {
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -134,14 +157,23 @@ function AdminLoginContent() {
                   name="email"
                   type="email"
                   autoComplete="email"
-                  required
                   placeholder="user@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10 border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError(null);
+                  }}
+                  className={`pl-10 focus:ring-1 transition-all ${
+                    emailError
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                      : 'border-slate-300 focus:border-blue-600 focus:ring-blue-600'
+                  }`}
                   disabled={loading}
                 />
               </div>
+              {emailError && (
+                <p className="text-xs text-red-500 mt-1">{emailError}</p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -156,14 +188,23 @@ function AdminLoginContent() {
                   name="password"
                   type="password"
                   autoComplete="current-password"
-                  required
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 border-slate-300 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 transition-all"
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (passwordError) setPasswordError(null);
+                  }}
+                  className={`pl-10 focus:ring-1 transition-all ${
+                    passwordError
+                      ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                      : 'border-slate-300 focus:border-blue-600 focus:ring-blue-600'
+                  }`}
                   disabled={loading}
                 />
               </div>
+              {passwordError && (
+                <p className="text-xs text-red-500 mt-1">{passwordError}</p>
+              )}
             </div>
 
             {/* Submit Button */}
@@ -243,21 +284,6 @@ function AdminLoginContent() {
         }
       `}</style>
     </div>
-  );
-}
-
-export default function AdminLoginPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    }>
-      <AdminLoginContent />
-    </Suspense>
   );
 }
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, Suspense } from 'react';
+import React, { useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/Button';
@@ -25,15 +25,14 @@ const errorMessages: Record<string, string> = {
   '99': 'Lỗi không xác định',
 };
 
-function PaymentFailedContent() {
+export default function PaymentFailedPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session, status } = useSession();
 
   const orderId = searchParams?.get('orderId');
   const errorCode = searchParams?.get('error') || 'unknown';
-  const errorMessage =
-    errorMessages[errorCode] || 'Thanh toán không thành công. Vui lòng thử lại sau.';
+  const errorMessage = errorMessages[errorCode] || 'Thanh toán không thành công. Vui lòng thử lại sau.';
 
   useEffect(() => {
     if (status === 'unauthenticated' && typeof window !== 'undefined') {
@@ -119,10 +118,3 @@ function PaymentFailedContent() {
   );
 }
 
-export default function PaymentFailedPage() {
-  return (
-    <Suspense fallback={null}>
-      <PaymentFailedContent />
-    </Suspense>
-  );
-}

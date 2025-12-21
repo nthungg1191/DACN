@@ -48,7 +48,7 @@ export function ProductGallery({ images, productName, className }: ProductGaller
           <div className="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
             <ZoomIn className="w-8 h-8" />
           </div>
-          <p>No images available</p>
+          <p>Không có ảnh</p>
         </div>
       </div>
     );
@@ -77,7 +77,7 @@ export function ProductGallery({ images, productName, className }: ProductGaller
               onClick={toggleZoom}
             >
               <ZoomIn className="w-4 h-4 mr-2" />
-              Zoom
+              Phóng to
             </Button>
           </div>
 

@@ -1,11 +1,9 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { Header } from '@/components/layout/header';
-import { Footer } from '@/components/layout/footer';
 import { AppProvider } from '@/contexts/AppProvider';
-import { ChatWidget } from '@/components/chat/ChatWidget';
 import { ConditionalLayout } from '@/components/layout/ConditionalLayout';
+import { GlobalAnnouncement } from '@/components/layout/GlobalAnnouncement';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,9 +21,8 @@ export default function RootLayout({
     <html lang="vi">
       <body className={inter.className}>
         <AppProvider>
-          <ConditionalLayout>
-            {children}
-          </ConditionalLayout>
+          <ConditionalLayout>{children}</ConditionalLayout>
+          <GlobalAnnouncement />
         </AppProvider>
       </body>
     </html>

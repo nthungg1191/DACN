@@ -5,6 +5,7 @@ import { ApiResponse } from '@/lib/types/api';
 /**
  * Handle 401 Unauthorized response
  * Redirects to login page and clears session
+ * Chỉ redirect khi đang ở trang yêu cầu authentication
  */
 function handleUnauthorized(url: string) {
   // Only handle on client side
@@ -18,6 +19,19 @@ function handleUnauthorized(url: string) {
   
   if (isSigninPage || isAdminLoginPage || isAdminRoute) {
     return;
+  }
+  
+  // Chỉ redirect khi đang ở trang yêu cầu authentication
+  // Không redirect khi ở trang public như /, /products, /products/[id]
+  const requiresAuth = 
+    currentPath.startsWith('/checkout') ||
+    currentPath.startsWith('/orders') ||
+    currentPath.startsWith('/profile') ||
+    currentPath.startsWith('/addresses') ||
+    currentPath.startsWith('/payment');
+  
+  if (!requiresAuth) {
+    return; // Không redirect khi ở trang public
   }
   
   // Get current path for callback URL
@@ -324,9 +338,10 @@ export function useProductReviews(productId: string | null) {
     }
   );
 
+  // Fetcher already extracts data.data, so data here is { reviews: [...], stats: {...} }
   return {
-    reviews: data?.data?.reviews || [],
-    stats: data?.data?.stats || {
+    reviews: data?.reviews || [],
+    stats: data?.stats || {
       totalReviews: 0,
       averageRating: 0,
       ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },

@@ -29,7 +29,16 @@ class ApiClient {
         const isAdminLoginPage = currentPath === '/admin/login';
         const isAdminRoute = currentPath.startsWith('/admin');
         
-        if (!isSigninPage && !isAdminLoginPage && !isAdminRoute) {
+        // Chỉ redirect khi đang ở trang yêu cầu authentication
+        // Không redirect khi ở trang public như /, /products, /products/[id]
+        const requiresAuth = 
+          currentPath.startsWith('/checkout') ||
+          currentPath.startsWith('/orders') ||
+          currentPath.startsWith('/profile') ||
+          currentPath.startsWith('/addresses') ||
+          currentPath.startsWith('/payment');
+        
+        if (!isSigninPage && !isAdminLoginPage && !isAdminRoute && requiresAuth) {
           const callbackUrl = currentPath + window.location.search;
           // Prevent redirect loop: don't set callbackUrl if it's already /auth/signin
           if (callbackUrl === '/auth/signin' || callbackUrl.startsWith('/auth/signin')) {

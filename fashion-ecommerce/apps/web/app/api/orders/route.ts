@@ -3,6 +3,7 @@ import { prisma } from '@repo/database';
 import { getCurrentUser, createUnauthorizedResponse } from '@/lib/auth-server';
 import { z } from 'zod';
 import { cache } from '@/lib/redis';
+import { calculateShippingFee, calculateTax, getSettings } from '@/lib/settings';
 
 // GET /api/orders - Get user's orders
 export async function GET(request: NextRequest) {
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest) {
       billingAddressId: z.string().optional(),
       paymentMethod: z.string().min(1, 'Payment method is required'),
       notes: z.string().optional(),
+      couponId: z.string().optional(),
     });
 
     let parsedData;
@@ -150,7 +152,24 @@ export async function POST(request: NextRequest) {
       throw validationError;
     }
 
-    const { shippingAddressId, billingAddressId, paymentMethod, notes } = parsedData;
+    const { shippingAddressId, billingAddressId, paymentMethod, notes, couponId } = parsedData;
+
+    // Validate payment method is enabled
+    const settings = await getSettings();
+    const isPaymentMethodEnabled = 
+      (paymentMethod === 'COD' && settings.paymentCodEnabled) ||
+      (paymentMethod === 'BANK_TRANSFER' && settings.paymentBankTransferEnabled) ||
+      (paymentMethod === 'CREDIT_CARD' && settings.paymentCreditCardEnabled);
+
+    if (!isPaymentMethodEnabled) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Phương thức thanh toán này hiện không khả dụng',
+        },
+        { status: 400 }
+      );
+    }
 
     // Get user's cart
     const cart = await prisma.cart.findUnique({
@@ -189,8 +208,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate cart items stock
+    // Validate cart items stock (check both product and variant stock)
     for (const item of cart.items) {
+      // Check product total stock
       if (item.product.quantity < item.quantity) {
         return NextResponse.json(
           {
@@ -199,6 +219,27 @@ export async function POST(request: NextRequest) {
           },
           { status: 400 }
         );
+      }
+
+      // If item has size and color, also check variant stock
+      if (item.size && item.color) {
+        const variant = await prisma.productVariant.findFirst({
+          where: {
+            productId: item.productId,
+            size: item.size,
+            color: item.color,
+          },
+        });
+
+        if (variant && variant.quantity < item.quantity) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: `Insufficient stock for ${item.product.name} - ${item.size} ${item.color}. Only ${variant.quantity} available.`,
+            },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -248,8 +289,9 @@ export async function POST(request: NextRequest) {
 
     // Calculate totals
     let subtotal = 0;
-    const orderItems = cart.items.map((item: any) => {
-      const itemPrice = Number(item.product.price);
+    const orderItems = cart.items.map((item) => {
+      // Use variant price from CartItem if available, otherwise use product price
+      const itemPrice = item.price ? Number(item.price) : Number(item.product.price);
       const itemTotal = itemPrice * item.quantity;
       subtotal += itemTotal;
 
@@ -261,15 +303,90 @@ export async function POST(request: NextRequest) {
       };
     });
 
-    const shipping = 0; // Free shipping for now
-    const tax = subtotal * 0.1; // 10% tax
-    const total = subtotal + shipping + tax;
+    // Validate and apply coupon if provided
+    let discount = 0;
+    let coupon = null;
+    if (couponId) {
+      coupon = await prisma.coupon.findUnique({
+        where: { id: couponId },
+      });
+
+      if (!coupon) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Mã giảm giá không tồn tại',
+          },
+          { status: 400 }
+        );
+      }
+
+      // Validate coupon
+      const now = new Date();
+      if (!coupon.active) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Mã giảm giá đã bị vô hiệu hóa',
+          },
+          { status: 400 }
+        );
+      }
+
+      if (now < coupon.validFrom || now > coupon.validUntil) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Mã giảm giá không còn hiệu lực',
+          },
+          { status: 400 }
+        );
+      }
+
+      if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Mã giảm giá đã hết lượt sử dụng',
+          },
+          { status: 400 }
+        );
+      }
+
+      if (coupon.minOrderAmount && subtotal < Number(coupon.minOrderAmount)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Đơn hàng tối thiểu ${Number(coupon.minOrderAmount).toLocaleString('vi-VN')}đ để sử dụng mã này`,
+          },
+          { status: 400 }
+        );
+      }
+
+      // Calculate discount
+      if (coupon.type === 'PERCENTAGE') {
+        discount = subtotal * (Number(coupon.value) / 100);
+        if (coupon.maxDiscountAmount && discount > Number(coupon.maxDiscountAmount)) {
+          discount = Number(coupon.maxDiscountAmount);
+        }
+      } else if (coupon.type === 'FIXED') {
+        discount = Number(coupon.value);
+        if (discount > subtotal) {
+          discount = subtotal;
+        }
+      }
+    }
+
+    const subtotalAfterDiscount = Math.max(0, subtotal - discount);
+    const shipping = await calculateShippingFee(subtotalAfterDiscount);
+    const tax = await calculateTax(subtotalAfterDiscount);
+    const total = subtotalAfterDiscount + shipping + tax;
 
     // Generate order number
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
     // Create order in transaction
-    const order = await prisma.$transaction(async (tx: any) => {
+    const order = await prisma.$transaction(async (tx) => {
       // Prepare address data for JSON fields
       const shippingAddressData = {
         id: shippingAddress.id,
@@ -293,15 +410,29 @@ export async function POST(request: NextRequest) {
         country: billingAddress.country,
       };
 
+      // Update coupon usedCount if coupon is applied
+      if (coupon) {
+        await tx.coupon.update({
+          where: { id: coupon.id },
+          data: {
+            usedCount: {
+              increment: 1,
+            },
+          },
+        });
+      }
+
       // Create order
       const newOrder = await tx.order.create({
         data: {
           orderNumber,
           userId: user.id,
           subtotal,
+          discount: Math.round(discount),
           tax,
           shipping,
           total,
+          couponId: coupon?.id || null,
           shippingAddress: shippingAddressData,
           billingAddress: billingAddressData,
           paymentMethod,
@@ -328,8 +459,37 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      // Update product quantities
+      // Update product and variant quantities
       for (const item of cart.items) {
+        // If item has size and color, find and update the variant
+        if (item.size && item.color) {
+          const variant = await tx.productVariant.findFirst({
+            where: {
+              productId: item.productId,
+              size: item.size,
+              color: item.color,
+            },
+          });
+
+          if (variant) {
+            // Check variant stock
+            if (variant.quantity < item.quantity) {
+              throw new Error(`Insufficient stock for variant ${item.size} ${item.color}. Only ${variant.quantity} available.`);
+            }
+
+            // Update variant quantity
+            await tx.productVariant.update({
+              where: { id: variant.id },
+              data: {
+                quantity: {
+                  decrement: item.quantity,
+                },
+              },
+            });
+          }
+        }
+
+        // Always update product total quantity
         await tx.product.update({
           where: { id: item.productId },
           data: {

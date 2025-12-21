@@ -92,11 +92,11 @@ export async function GET(request: NextRequest) {
       _count: { reviews: number };
     };
 
-    const categoriesWithProductRatings = categories.map((category: any) => {
+    const categoriesWithProductRatings = categories.map((category) => {
       const mapProduct = (product: ProductWithMeta) => {
         const avgRating =
           product.reviews.length > 0
-            ? product.reviews.reduce((sum: number, review: any ) => sum + review.rating, 0) /
+            ? product.reviews.reduce((sum: number, review: any) => sum + review.rating, 0) /
               product.reviews.length
             : 0;
 
@@ -132,11 +132,11 @@ export async function GET(request: NextRequest) {
       data: categoriesWithProductRatings,
     });
   } catch (error) {
-    console.error('Error fetching categories:', error);
+    console.error('lỗi khi lấy danh mục sản phẩm:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch categories',
+        error: 'lỗi khi lấy danh mục sản phẩm',
         message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

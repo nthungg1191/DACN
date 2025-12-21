@@ -31,13 +31,13 @@ export async function GET(
         ? 0
         : Number(
             (
-              reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / totalReviews
+              reviews.reduce((sum : number, r : any) => sum + r.rating, 0) / totalReviews
             ).toFixed(1)
           );
 
     const ratingDistribution = [1, 2, 3, 4, 5].reduce<Record<number, number>>(
       (acc, rating) => {
-        acc[rating] = reviews.filter((r: any) => r.rating === rating).length;
+        acc[rating] = reviews.filter((r : any) => r.rating === rating).length;
         return acc;
       },
       { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
@@ -46,7 +46,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       data: {
-        reviews: reviews.map((r: any) => ({
+        reviews: reviews.map((r : any) => ({
           id: r.id,
           rating: r.rating,
           comment: r.comment,
@@ -85,7 +85,27 @@ export async function POST(
 
     const { id: productId } = await context.params;
     const body = await request.json();
-    const parsed = createReviewSchema.parse(body);
+    
+    let parsed;
+    try {
+      parsed = createReviewSchema.parse(body);
+    } catch (validationError) {
+      if (validationError instanceof z.ZodError) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Dữ liệu không hợp lệ', 
+            message: 'Vui lòng kiểm tra lại thông tin đánh giá',
+            details: validationError.errors.map(err => ({
+              field: err.path.join('.'),
+              message: err.message,
+            })),
+          },
+          { status: 400 }
+        );
+      }
+      throw validationError;
+    }
 
     // Validate product exists
     const product = await prisma.product.findUnique({
@@ -95,7 +115,7 @@ export async function POST(
 
     if (!product) {
       return NextResponse.json(
-        { success: false, error: 'Product not found' },
+        { success: false, error: 'Sản phẩm không tồn tại' },
         { status: 404 }
       );
     }
@@ -104,19 +124,18 @@ export async function POST(
     const hasOrder = await prisma.order.findFirst({
       where: {
         userId: user.id,
-        status: 'DELIVERED', // hiện schema chỉ có DELIVERED (không có COMPLETED)
+        status: 'DELIVERED',
         items: { some: { productId } },
       },
       select: { id: true },
     });
 
-    // NOTE: Trước đây chỉ cho phép khi đã DELIVERED.
-    // Để tránh chặn người dùng (nhất là dữ liệu demo), cho phép nếu đã từng mua sản phẩm (bất kỳ trạng thái).
     if (!hasOrder) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Bạn cần đã nhận hàng để đánh giá sản phẩm này.',
+          error: 'Bạn cần đã nhận hàng để đánh giá sản phẩm này',
+          message: 'Vui lòng đợi đơn hàng được giao thành công (trạng thái DELIVERED) trước khi đánh giá',
         },
         { status: 400 }
       );
@@ -130,7 +149,11 @@ export async function POST(
 
     if (existingReview) {
       return NextResponse.json(
-        { success: false, error: 'Bạn đã đánh giá sản phẩm này.' },
+        { 
+          success: false, 
+          error: 'Bạn đã đánh giá sản phẩm này',
+          message: 'Mỗi sản phẩm chỉ có thể đánh giá một lần. Vui lòng đánh giá sản phẩm khác',
+        },
         { status: 400 }
       );
     }
@@ -159,19 +182,19 @@ export async function POST(
           name: review.user.name || review.user.email || 'Người dùng',
         },
       },
-      message: 'Đã gửi đánh giá thành công',
+      message: 'Đã gửi đánh giá thành công. Cảm ơn bạn đã đánh giá sản phẩm.',
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { success: false, error: 'Invalid data', details: error.errors },
+        { success: false, error: 'Dữ liệu không hợp lệ', details: error.errors },
         { status: 400 }
       );
     }
 
-    console.error('Error creating review:', error);
+    console.error('lỗi khi tạo đánh giá:', error);
     return NextResponse.json(
-      { success: false, error: 'Failed to create review' },
+      { success: false, error: 'lỗi khi tạo đánh giá' },
       { status: 500 }
     );
   }

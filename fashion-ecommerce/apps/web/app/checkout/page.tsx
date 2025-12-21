@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { useToast } from '@/components/ui/useToast';
 import { Modal } from '@/components/modals/Modal';
+import { LoginRequiredModal } from '@/components/modals/LoginRequiredModal';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -69,48 +70,32 @@ export default function CheckoutPage() {
   const [notes, setNotes] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const hasRedirectedRef = useRef(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    couponId: string;
+    code: string;
+    discount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [settings, setSettings] = useState<{
+    shippingFee: number;
+    freeShippingThreshold: number | null;
+    taxRate: number;
+    paymentCodEnabled: boolean;
+    paymentBankTransferEnabled: boolean;
+    paymentCreditCardEnabled: boolean;
+  } | null>(null);
 
-  // Redirect if not authenticated (only after session has loaded)
+  // Hiển thị modal yêu cầu đăng nhập khi vào trang checkout nếu chưa đăng nhập
   useEffect(() => {
-    // Don't redirect while session is loading
-    if (status === 'loading') {
-      return;
+    if (status === 'unauthenticated' && !showLoginModal) {
+      setShowLoginModal(true);
+    } else if (status === 'authenticated' && showLoginModal) {
+      setShowLoginModal(false);
     }
-
-    // Only redirect if unauthenticated and we haven't redirected yet
-    if (status === 'unauthenticated' && typeof window !== 'undefined' && !hasRedirectedRef.current) {
-      // Prevent redirect loop: don't redirect if already on signin page
-      if (window.location.pathname !== '/auth/signin') {
-        // Check if we just came from signin page (to avoid immediate redirect after login)
-        const fromSignin = sessionStorage.getItem('fromSignin');
-        if (fromSignin) {
-          // Clear the flag and wait a bit for session to update
-          sessionStorage.removeItem('fromSignin');
-          // Give NextAuth time to update the session after login
-          // The page will re-render when session updates, so we don't need to check in setTimeout
-          return;
-        }
-        
-        // Check if there's a callbackUrl in the current URL (means we just came from signin)
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.has('callbackUrl')) {
-          // We're being redirected back from signin, wait for session to update
-          return;
-        }
-        
-        hasRedirectedRef.current = true;
-        // Use window.location.href instead of router.push to avoid NextAuth message channel issues
-        const callbackUrl = encodeURIComponent('/checkout');
-        window.location.href = `/auth/signin?callbackUrl=${callbackUrl}`;
-      }
-    }
-    
-    // Reset redirect flag when authenticated (allows redirect again if user logs out)
-    if (status === 'authenticated') {
-      hasRedirectedRef.current = false;
-    }
-  }, [status]);
+  }, [status, showLoginModal]);
 
   // Set default address
   useEffect(() => {
@@ -128,6 +113,29 @@ export default function CheckoutPage() {
     }
   }, [cart, router]);
 
+  // Fetch settings
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await fetch('/api/settings');
+        const data = await response.json();
+        if (data.success) {
+          setSettings({
+            shippingFee: data.data.shippingFee,
+            freeShippingThreshold: data.data.freeShippingThreshold,
+            taxRate: data.data.taxRate,
+            paymentCodEnabled: data.data.paymentCodEnabled,
+            paymentBankTransferEnabled: data.data.paymentBankTransferEnabled,
+            paymentCreditCardEnabled: data.data.paymentCreditCardEnabled,
+          });
+        }
+      } catch (error) {
+        console.error('Error fetching settings:', error);
+      }
+    };
+    fetchSettings();
+  }, []);
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -137,14 +145,77 @@ export default function CheckoutPage() {
 
   const calculateTotals = () => {
     const subtotal = cart.totalPrice || 0;
-    const shipping = 0; // Free shipping
-    const tax = subtotal * 0.1; // 10% tax
-    const total = subtotal + shipping + tax;
+    const discount = appliedCoupon?.discount || 0;
+    const subtotalAfterDiscount = Math.max(0, subtotal - discount);
+    
+    // Tính shipping từ settings
+    let shipping = 0;
+    if (settings) {
+      // Nếu có freeShippingThreshold và subtotal >= threshold thì miễn phí
+      if (settings.freeShippingThreshold && subtotalAfterDiscount >= settings.freeShippingThreshold) {
+        shipping = 0;
+      } else {
+        shipping = settings.shippingFee;
+      }
+    }
+    
+    // Tính tax từ settings
+    const taxRate = settings?.taxRate || 10;
+    const tax = subtotalAfterDiscount * (taxRate / 100);
+    const total = subtotalAfterDiscount + shipping + tax;
 
-    return { subtotal, shipping, tax, total };
+    return { subtotal, discount, shipping, tax, total };
   };
 
-  const { subtotal, shipping, tax, total } = calculateTotals();
+  const { subtotal, discount, shipping, tax, total } = calculateTotals();
+
+  const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+      setCouponError('Vui lòng nhập mã giảm giá');
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    setCouponError(null);
+
+    try {
+      const response = await fetch('/api/coupons/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          code: couponCode.trim(),
+          subtotal: cart.totalPrice || 0,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setCouponError(data.error || 'Mã giảm giá không hợp lệ');
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setAppliedCoupon({
+        couponId: data.data.couponId,
+        code: data.data.code,
+        discount: data.data.discount,
+      });
+      setCouponError(null);
+      toastSuccess('Thành công', 'Áp dụng mã giảm giá thành công!');
+    } catch (error) {
+      setCouponError('Đã xảy ra lỗi khi áp dụng mã giảm giá');
+      setAppliedCoupon(null);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCode('');
+    setCouponError(null);
+  };
 
   const handleNextStep = () => {
     if (currentStep === 1) {
@@ -255,6 +326,14 @@ export default function CheckoutPage() {
   };
 
   const handleCreateOrder = async () => {
+    // Yêu cầu đăng nhập trước khi đặt hàng
+    if (status === 'unauthenticated') {
+      toastError('Yêu cầu đăng nhập', 'Vui lòng đăng nhập để tiếp tục đặt hàng.');
+      const callbackUrl = encodeURIComponent('/checkout');
+      router.push(`/auth/signin?callbackUrl=${callbackUrl}`);
+      return;
+    }
+
     // Validate cart first
     if (!cart.items || cart.items.length === 0) {
       toastError('Lỗi', 'Giỏ hàng của bạn đang trống. Vui lòng thêm sản phẩm vào giỏ hàng.');
@@ -288,6 +367,7 @@ export default function CheckoutPage() {
           billingAddressId: useDifferentBilling ? selectedBillingAddress?.id : selectedShippingAddress.id,
           paymentMethod,
           notes: notes || undefined,
+          couponId: appliedCoupon?.couponId || undefined,
         }),
       });
 
@@ -435,13 +515,19 @@ export default function CheckoutPage() {
     );
   }
 
-  // Don't render if not authenticated (will redirect)
-  if (status === 'unauthenticated') {
-    return null;
-  }
-
+  // Hiển thị thông báo nếu giỏ hàng trống
   if (!cart.items || cart.items.length === 0) {
-    return null; // Will redirect
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Giỏ hàng trống</h1>
+          <p className="text-gray-600 mb-6">Vui lòng thêm sản phẩm vào giỏ hàng trước khi thanh toán.</p>
+          <Link href="/products">
+            <Button size="lg">Tiếp tục mua sắm</Button>
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   const steps = [
@@ -451,9 +537,22 @@ export default function CheckoutPage() {
   ];
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Thanh toán</h1>
+    <>
+      {/* Login Required Modal - Hiển thị ngay khi vào trang nếu chưa đăng nhập */}
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => {
+          setShowLoginModal(false);
+          router.push('/products');
+        }}
+        message="Bạn cần đăng nhập để tiếp tục thanh toán"
+        callbackUrl="/checkout"
+        forceLogin={true}
+      />
+
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8">Thanh toán</h1>
 
         {/* Step Indicator */}
         <div className="mb-8">
@@ -523,30 +622,39 @@ export default function CheckoutPage() {
                 </Button>
               </div>
 
-              {addresses && addresses.length > 0 ? (
-                <div className="space-y-4">
-                  {addresses.map((address) => (
-                    <div
-                      key={address.id}
-                      onClick={() => setSelectedShippingAddress(address)}
-                      className={`cursor-pointer transition ${
-                        selectedShippingAddress?.id === address.id
-                          ? 'ring-2 ring-blue-500'
-                          : ''
-                      }`}
-                    >
-                      <AddressCard
-                        address={address}
-                        showSelect={false}
-                        showActions={false}
-                      />
-                    </div>
-                  ))}
-                </div>
+              {status === 'authenticated' ? (
+                addresses && addresses.length > 0 ? (
+                  <div className="space-y-4">
+                    {addresses.map((address) => (
+                      <div
+                        key={address.id}
+                        onClick={() => setSelectedShippingAddress(address)}
+                        className={`cursor-pointer transition ${
+                          selectedShippingAddress?.id === address.id
+                            ? 'ring-2 ring-blue-500'
+                            : ''
+                        }`}
+                      >
+                        <AddressCard
+                          address={address}
+                          showSelect={false}
+                          showActions={false}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-600 mb-4">Bạn chưa có địa chỉ nào</p>
+                    <Button onClick={() => setIsFormOpen(true)}>Thêm địa chỉ mới</Button>
+                  </div>
+                )
               ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-600 mb-4">Bạn chưa có địa chỉ nào</p>
-                  <Button onClick={() => setIsFormOpen(true)}>Thêm địa chỉ mới</Button>
+                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                  <p className="text-gray-600 mb-4">Vui lòng đăng nhập để thêm địa chỉ giao hàng</p>
+                  <Link href={`/auth/signin?callbackUrl=${encodeURIComponent('/checkout')}`}>
+                    <Button>Đăng nhập</Button>
+                  </Link>
                 </div>
               )}
                 </div>
@@ -604,49 +712,115 @@ export default function CheckoutPage() {
                 <div className="bg-white rounded-lg border border-gray-200 p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-4">Phương thức thanh toán</h2>
                   <div className="space-y-3">
-                    <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="COD"
-                        checked={paymentMethod === 'COD'}
-                        onChange={(e) => setPaymentMethod(e.target.value as 'COD' | 'BANK_TRANSFER' | 'CREDIT_CARD')}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="ml-3">
-                        <span className="font-medium text-gray-900">Thanh toán khi nhận hàng (COD)</span>
-                        <p className="text-sm text-gray-600">Thanh toán bằng tiền mặt khi nhận hàng</p>
-                      </div>
-                    </label>
-                    <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="BANK_TRANSFER"
-                        checked={paymentMethod === 'BANK_TRANSFER'}
-                        onChange={(e) => setPaymentMethod(e.target.value as 'COD' | 'BANK_TRANSFER' | 'CREDIT_CARD')}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="ml-3">
-                        <span className="font-medium text-gray-900">Chuyển khoản ngân hàng</span>
-                        <p className="text-sm text-gray-600">Chuyển khoản qua tài khoản ngân hàng</p>
-                      </div>
-                    </label>
-                    <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition">
-                      <input
-                        type="radio"
-                        name="paymentMethod"
-                        value="CREDIT_CARD"
-                        checked={paymentMethod === 'CREDIT_CARD'}
-                        onChange={(e) => setPaymentMethod(e.target.value as 'COD' | 'BANK_TRANSFER' | 'CREDIT_CARD')}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500"
-                      />
-                      <div className="ml-3">
-                        <span className="font-medium text-gray-900">Thẻ tín dụng</span>
-                        <p className="text-sm text-gray-600">Thanh toán bằng thẻ Visa, Mastercard</p>
-                      </div>
-                    </label>
+                    {settings?.paymentCodEnabled && (
+                      <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="COD"
+                          checked={paymentMethod === 'COD'}
+                          onChange={(e) => setPaymentMethod(e.target.value as 'COD' | 'BANK_TRANSFER' | 'CREDIT_CARD')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <span className="font-medium text-gray-900">Thanh toán khi nhận hàng (COD)</span>
+                          <p className="text-sm text-gray-600">Thanh toán bằng tiền mặt khi nhận hàng</p>
+                        </div>
+                      </label>
+                    )}
+                    {settings?.paymentBankTransferEnabled && (
+                      <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="BANK_TRANSFER"
+                          checked={paymentMethod === 'BANK_TRANSFER'}
+                          onChange={(e) => setPaymentMethod(e.target.value as 'COD' | 'BANK_TRANSFER' | 'CREDIT_CARD')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <span className="font-medium text-gray-900">Chuyển khoản ngân hàng</span>
+                          <p className="text-sm text-gray-600">Chuyển khoản qua tài khoản ngân hàng</p>
+                        </div>
+                      </label>
+                    )}
+                    {settings?.paymentCreditCardEnabled && (
+                      <label className="flex items-center p-4 border-2 rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="CREDIT_CARD"
+                          checked={paymentMethod === 'CREDIT_CARD'}
+                          onChange={(e) => setPaymentMethod(e.target.value as 'COD' | 'BANK_TRANSFER' | 'CREDIT_CARD')}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500"
+                        />
+                        <div className="ml-3">
+                          <span className="font-medium text-gray-900">Thẻ tín dụng</span>
+                          <p className="text-sm text-gray-600">Thanh toán bằng thẻ Visa, Mastercard</p>
+                        </div>
+                      </label>
+                    )}
+                    {!settings && (
+                      <p className="text-sm text-gray-500">Đang tải phương thức thanh toán...</p>
+                    )}
+                    {settings && !settings.paymentCodEnabled && !settings.paymentBankTransferEnabled && !settings.paymentCreditCardEnabled && (
+                      <p className="text-sm text-red-600">Không có phương thức thanh toán nào được kích hoạt. Vui lòng liên hệ admin.</p>
+                    )}
                   </div>
+                </div>
+
+                {/* Coupon Code */}
+                <div className="bg-white rounded-lg border border-gray-200 p-6">
+                  <Label htmlFor="couponCode">Mã giảm giá</Label>
+                  {appliedCoupon ? (
+                    <div className="mt-2 flex items-center justify-between p-3 bg-green-50 border border-green-200 rounded-md">
+                      <div>
+                        <p className="text-sm font-medium text-green-800">
+                          Mã giảm giá: {appliedCoupon.code}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          Giảm {formatPrice(appliedCoupon.discount)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleRemoveCoupon}
+                        className="text-sm text-red-600 hover:text-red-700 font-medium"
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex gap-2">
+                      <Input
+                        id="couponCode"
+                        value={couponCode}
+                        onChange={(e) => {
+                          setCouponCode(e.target.value.toUpperCase());
+                          setCouponError(null);
+                        }}
+                        placeholder="Nhập mã giảm giá"
+                        className="flex-1"
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleApplyCoupon();
+                          }
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        onClick={handleApplyCoupon}
+                        disabled={isApplyingCoupon || !couponCode.trim()}
+                        variant="outline"
+                      >
+                        {isApplyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng'}
+                      </Button>
+                    </div>
+                  )}
+                  {couponError && (
+                    <p className="mt-2 text-sm text-red-600">{couponError}</p>
+                  )}
                 </div>
 
                 {/* Notes */}
@@ -775,6 +949,12 @@ export default function CheckoutPage() {
                   <span>Tạm tính</span>
                   <span>{formatPrice(subtotal)}</span>
                 </div>
+                {discount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span>Giảm giá</span>
+                    <span>-{formatPrice(discount)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-gray-600">
                   <span>Thuế (10%)</span>
                   <span>{formatPrice(tax)}</span>
@@ -816,7 +996,8 @@ export default function CheckoutPage() {
           onCancel={() => setIsFormOpen(false)}
         />
       </Modal>
-    </div>
+      </div>
+    </>
   );
 }
 

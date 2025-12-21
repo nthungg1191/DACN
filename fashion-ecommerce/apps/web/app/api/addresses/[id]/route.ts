@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@repo/database';
 import { getCurrentUser, createUnauthorizedResponse } from '@/lib/auth-server';
 import { z } from 'zod';
-
 // GET /api/addresses/[id] - Get address by ID
 export async function GET(
   request: NextRequest,
@@ -29,7 +28,7 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          error: 'Address not found',
+          error: 'địa chỉ không tồn tại',
         },
         { status: 404 }
       );
@@ -40,11 +39,11 @@ export async function GET(
       data: address,
     });
   } catch (error) {
-    console.error('Error fetching address:', error);
+    console.error('lỗi khi lấy địa chỉ:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to fetch address',
+        error: 'lỗi khi lấy địa chỉ',
       },
       { status: 500 }
     );
@@ -77,7 +76,7 @@ export async function PUT(
       return NextResponse.json(
         {
           success: false,
-          error: 'Address not found',
+          error: 'địa chỉ không tồn tại',
         },
         { status: 404 }
       );
@@ -85,13 +84,13 @@ export async function PUT(
 
     const body = await request.json();
     const addressSchema = z.object({
-      fullName: z.string().min(1, 'Full name is required').optional(),
-      phone: z.string().min(10, 'Phone number must be at least 10 digits').optional(),
-      street: z.string().min(1, 'Street address is required').optional(),
-      city: z.string().min(1, 'City is required').optional(),
-      state: z.string().min(1, 'State/Province is required').optional(),
-      postalCode: z.string().min(1, 'Postal code is required').optional(),
-      country: z.string().min(1, 'Country is required').optional(),
+      fullName: z.string().min(1, 'tên đầy đủ là bắt buộc').optional(),
+      phone: z.string().min(10, 'số điện thoại phải có ít nhất 10 chữ số'),
+      street: z.string().min(1, 'địa chỉ là bắt buộc').optional(),
+      city: z.string().min(1, 'thành phố là bắt buộc').optional(),
+      state: z.string().min(1, 'tỉnh/thành phố là bắt buộc').optional(),
+      postalCode: z.string().min(1, 'mã bưu điện là bắt buộc').optional(),
+      country: z.string().min(1, 'quốc gia là bắt buộc').optional(),
       isDefault: z.boolean().optional(),
     });
 
@@ -121,25 +120,25 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       data: address,
-      message: 'Address updated successfully',
+      message: 'địa chỉ đã được cập nhật thành công',
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Validation error',
+          error: 'lỗi khi cập nhật địa chỉ',
           details: error.errors,
         },
         { status: 400 }
       );
     }
 
-    console.error('Error updating address:', error);
+    console.error('lỗi khi cập nhật địa chỉ:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to update address',
+        error: 'lỗi khi cập nhật địa chỉ',
       },
       { status: 500 }
     );
@@ -172,7 +171,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           success: false,
-          error: 'Address not found',
+          error: 'địa chỉ không tồn tại',
         },
         { status: 404 }
       );
@@ -186,14 +185,14 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Address deleted successfully',
+      message: 'địa chỉ đã được xóa thành công',
     });
   } catch (error) {
-    console.error('Error deleting address:', error);
+    console.error('lỗi khi xóa địa chỉ:', error);
     return NextResponse.json(
       {
         success: false,
-        error: 'Failed to delete address',
+        error: 'lỗi khi xóa địa chỉ',
       },
       { status: 500 }
     );

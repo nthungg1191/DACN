@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
+import { AdminChatWidget } from '@/components/admin/chat/AdminChatWidget';
 import {
   LayoutDashboard,
   Package,
@@ -194,6 +195,9 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
         {/* Page content */}
         <main className="p-6">{children}</main>
+
+        {/* Admin Chatbot */}
+        <AdminChatWidget />
       </div>
     </div>
   );

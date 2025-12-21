@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@repo/database';
 import { Prisma } from '@prisma/client';
-import { Decimal } from '@prisma/client/runtime/library';
 import { getCurrentUser, createUnauthorizedResponse } from '@/lib/auth-server';
 import { z } from 'zod';
 
@@ -86,8 +85,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Calculate totals
-    const totalItems = cart.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
-    const subtotal = cart.items.reduce((sum: number, item: any) => {
+    const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
+    const subtotal = cart.items.reduce((sum, item) => {
       const itemPrice = item.price ? Number(item.price) : Number(item.product.price);
       return sum + (itemPrice * item.quantity);
     }, 0);
@@ -255,7 +254,7 @@ export async function POST(request: NextRequest) {
           quantity: newQuantity,
           size: size || null,
           color: color || null,
-          price: price ? new Decimal(price) : existingItem.price,
+          price: price ? new Prisma.Decimal(price) : existingItem.price,
         },
         include: {
           product: {
@@ -291,7 +290,7 @@ export async function POST(request: NextRequest) {
           quantity: quantity,
           size: size || null,
           color: color || null,
-          price: price ? new Decimal(price) : null,
+          price: price ? new Prisma.Decimal(price) : null,
         },
         include: {
           product: {

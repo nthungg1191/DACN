@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@repo/database';
 import { requireAdmin, createForbiddenResponse } from '@/lib/auth-server';
 import { z } from 'zod';
+import { cache } from '@/lib/redis';
 
 // GET /api/admin/orders/[id] - Get order detail (admin only)
 export async function GET(
@@ -87,7 +88,17 @@ export async function PATCH(
     const body = await request.json();
 
     const updateSchema = z.object({
-      status: z.enum(['PENDING', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']).optional(),
+      status: z
+        .enum([
+          'PENDING',
+          'PROCESSING',
+          'SHIPPED',
+          'DELIVERED',
+          'RECEIVED',
+          'RETURN_REQUESTED',
+          'CANCELLED',
+        ])
+        .optional(),
       paymentStatus: z.enum(['PENDING', 'PAID', 'FAILED', 'REFUNDED']).optional(),
       notes: z.string().optional(),
     });
@@ -127,12 +138,19 @@ export async function PATCH(
     }
 
     // Admin can update any status (no restrictions)
+    const now = new Date();
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
-        ...(parsedData.status && { status: parsedData.status }),
+        ...(parsedData.status && { status: parsedData.status as any }),
         ...(parsedData.paymentStatus && { paymentStatus: parsedData.paymentStatus }),
         ...(parsedData.notes && { notes: parsedData.notes }),
+        ...(parsedData.status === 'DELIVERED' && existingOrder.status !== 'DELIVERED' && {
+          deliveredAt: now,
+        }),
+        ...(parsedData.status === 'RECEIVED' && (existingOrder.status as any) !== 'RECEIVED' && {
+          receivedAt: now,
+        }),
       },
       include: {
         user: {
@@ -159,7 +177,7 @@ export async function PATCH(
     // If order is cancelled, restore product quantities
     if (parsedData.status === 'CANCELLED' && existingOrder.status !== 'CANCELLED') {
       await prisma.$transaction(
-        updatedOrder.items.map((item: any) =>
+        (updatedOrder as any).items.map((item: any) =>
           prisma.product.update({
             where: { id: item.productId },
             data: {
@@ -170,6 +188,14 @@ export async function PATCH(
           })
         )
       );
+    }
+
+    // Invalidate user caches related to this order
+    try {
+      await cache.delPattern(`orders:user:${existingOrder.userId}:*`);
+      await cache.del(`order:${id}:user:${existingOrder.userId}`);
+    } catch (cacheError) {
+      console.error('Failed to invalidate user order cache from admin API:', cacheError);
     }
 
     return NextResponse.json({

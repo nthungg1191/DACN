@@ -2,6 +2,7 @@
 
 import { AdminSidebar } from '../sidebar/AdminSidebar';
 import { AdminTopBar } from '../topbar/AdminTopBar';
+import { AdminChatWidget } from '../chat/AdminChatWidget';
 import { useState } from 'react';
 
 interface AdminTemplateProps {
@@ -31,6 +32,9 @@ export function AdminTemplate({ children }: AdminTemplateProps) {
 
         {/* Page content */}
         <main className="p-6">{children}</main>
+
+        {/* Admin Chatbot */}
+        <AdminChatWidget />
       </div>
     </div>
   );

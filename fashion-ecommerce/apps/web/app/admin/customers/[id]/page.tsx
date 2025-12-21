@@ -8,8 +8,11 @@ async function getCustomerDetail(customerId: string, page: number = 1, limit: nu
   try {
     const skip = (page - 1) * limit;
 
-    const customer = await prisma.user.findUnique({
-      where: { id: customerId, role: 'CUSTOMER' },
+    const customer = await prisma.user.findFirst({
+      where: { 
+        id: customerId, 
+        role: 'CUSTOMER' 
+      },
       select: {
         id: true,
         name: true,
@@ -159,8 +162,8 @@ export default async function AdminCustomerDetailPage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams: { page?: string };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ page?: string }>;
 }) {
   try {
     await requireAdmin();
@@ -168,8 +171,10 @@ export default async function AdminCustomerDetailPage({
     redirect('/admin/login?callbackUrl=/admin/customers');
   }
 
-  const page = parseInt(searchParams.page || '1');
-  const customer = await getCustomerDetail(params.id, page, 10);
+  const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
+  const page = parseInt(resolvedSearchParams.page || '1');
+  const customer = await getCustomerDetail(resolvedParams.id, page, 10);
 
   if (!customer) {
     notFound();

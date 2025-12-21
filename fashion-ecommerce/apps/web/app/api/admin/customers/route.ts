@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     // Calculate total spent for each customer
     const customersWithStats = await Promise.all(
-      customers.map(async (customer:any) => {
+      customers.map(async (customer) => {
         const totalSpent = await prisma.order.aggregate({
           where: {
             userId: customer.id,

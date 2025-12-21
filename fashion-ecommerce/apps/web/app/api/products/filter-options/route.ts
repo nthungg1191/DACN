@@ -31,26 +31,17 @@ export async function GET(request: NextRequest) {
 
     // Extract unique categories
     const categoriesMap = new Map<string, { id: string; name: string; slug: string }>();
-    products.forEach((p: any) => {
+    products.forEach((p) => {
       if (p.category) {
         categoriesMap.set(p.category.id, p.category);
       }
     });
-    const categories = Array.from(categoriesMap.values());
-
-    // Extract unique brands (non-null)
-    const brandsSet = new Set<string>();
-    products.forEach((p: any) => {
-      if (p.brand) {
-        brandsSet.add(p.brand);
-      }
-    });
-    const brands = Array.from(brandsSet).sort();
+    const categories = Array.from(categoriesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
     // Extract unique sizes from variants
     const sizesSet = new Set<string>();
-    products.forEach((p: any) => {
-      p.variants.forEach((v: any) => {
+    products.forEach((p) => {
+      p.variants.forEach((v) => {
         if (v.size) {
           sizesSet.add(v.size);
         }
@@ -60,8 +51,8 @@ export async function GET(request: NextRequest) {
 
     // Extract unique colors from variants with hex codes
     const colorsMap = new Map<string, { name: string; hex: string }>();
-    products.forEach((p: any) => {
-      p.variants.forEach((v: any) => {
+    products.forEach((p) => {
+      p.variants.forEach((v) => {
         if (v.color) {
           const colorHex = (v.attributes as any)?.colorHex;
           const hex = getColorHex(v.color, colorHex);
@@ -74,7 +65,7 @@ export async function GET(request: NextRequest) {
     const colors = Array.from(colorsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
 
     // Calculate min and max price
-    const prices = products.map((p: any) => Number(p.price));
+    const prices = products.map((p) => Number(p.price));
     const minPrice = prices.length > 0 ? Math.floor(Math.min(...prices)) : 0;
     const maxPrice = prices.length > 0 ? Math.ceil(Math.max(...prices)) : 1000000;
 
@@ -82,7 +73,6 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         categories,
-        brands,
         sizes,
         colors,
         priceRange: {

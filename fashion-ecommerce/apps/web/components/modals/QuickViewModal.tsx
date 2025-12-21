@@ -1,12 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Product } from '@repo/types';
 import { Modal } from './Modal';
 import { Button } from '@repo/ui';
 import { Heart, ShoppingCart, Minus, Plus } from 'lucide-react';
+import { LoginRequiredModal } from './LoginRequiredModal';
 
 interface QuickViewModalProps {
   isOpen: boolean;
@@ -25,8 +27,10 @@ export function QuickViewModal({
   onAddToWishlist,
   isInWishlist = false
 }: QuickViewModalProps) {
+  const { status } = useSession();
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [quantity, setQuantity] = useState(1);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const DEFAULT_PLACEHOLDER =
     'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1000" viewBox="0 0 800 1000"><rect width="800" height="1000" fill="%23f3f4f6"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="%239ca3af" font-size="32" font-family="Arial, sans-serif">No Image</text></svg>';
   const safeImage = (img?: string) => {
@@ -47,11 +51,23 @@ export function QuickViewModal({
     : 0;
 
   const handleAddToCart = () => {
+    // Kiểm tra đăng nhập trước khi thêm vào giỏ hàng
+    if (status === 'unauthenticated') {
+      setShowLoginModal(true);
+      return;
+    }
+
     onAddToCart?.(product.id, quantity);
     onClose();
   };
 
   const handleAddToWishlist = () => {
+    // Kiểm tra đăng nhập trước khi thêm vào wishlist
+    if (status === 'unauthenticated') {
+      setShowLoginModal(true);
+      return;
+    }
+
     onAddToWishlist?.(product.id);
   };
 
@@ -213,6 +229,14 @@ export function QuickViewModal({
           </div>
         </div>
       </div>
+
+      {/* Login Required Modal */}
+      <LoginRequiredModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        message="Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng"
+        callbackUrl={`/products/${product.slug}`}
+      />
     </Modal>
   );
 }

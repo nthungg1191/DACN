@@ -51,15 +51,18 @@ export default function ContactPage() {
     setSuccess(false);
 
     try {
-      // Simulate API call - Replace with actual API endpoint
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      
-      // Here you would make an actual API call
-      // const response = await fetch('/api/contact', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData),
-      // });
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(data.error || 'Đã xảy ra lỗi khi gửi tin nhắn. Vui lòng thử lại sau.');
+        return;
+      }
 
       setSuccess(true);
       setFormData({
